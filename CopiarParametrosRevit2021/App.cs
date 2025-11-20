@@ -207,23 +207,14 @@ public class App : IExternalApplication
 
             // ============ PANEL 5: LOOKAHEAD ============
 
-            // BOTÓN 13: Asignar
-            PushButtonData buttonDataAsignarLookahead = new PushButtonData("btnAsignarLookahead",
-                                                                           "Asignar",
-                                                                           path,
-                                                                           "TL_Tools2021.Commands.LookaheadManagement.AsignarLookaheadCommand");
-            PushButton buttonAsignarLookahead = panelLookaheadRibbon.AddItem(buttonDataAsignarLookahead) as PushButton;
-            buttonAsignarLookahead.ToolTip = "Asigna Look Ahead a elementos del modelo";
-            buttonAsignarLookahead.LongDescription = "Lee datos de Google Sheets y asigna semanas de Look Ahead a elementos según configuración de actividades y disciplinas.";
-
-            // BOTÓN 14: Membrete
-            PushButtonData buttonDataMembreteLookahead = new PushButtonData("btnMembreteLookahead",
-                                                                            "Membrete",
+            // BOTÓN 13: Procesar Look Ahead (Asignar + Membrete)
+            PushButtonData buttonDataProcesarLookahead = new PushButtonData("btnProcesarLookahead",
+                                                                            "Procesar\nLook Ahead",
                                                                             path,
-                                                                            "TL_Tools2021.Commands.LookaheadManagement.MembreteLookaheadCommand");
-            PushButton buttonMembreteLookahead = panelLookaheadRibbon.AddItem(buttonDataMembreteLookahead) as PushButton;
-            buttonMembreteLookahead.ToolTip = "Actualiza membrete del plano Look Ahead";
-            buttonMembreteLookahead.LongDescription = "Actualiza automáticamente el membrete del plano LPS-S con la información del proyecto, semana y activo correspondiente.";
+                                                                            "TL_Tools2021.Commands.LookaheadManagement.ProcesarLookaheadCommand");
+            PushButton buttonProcesarLookahead = panelLookaheadRibbon.AddItem(buttonDataProcesarLookahead) as PushButton;
+            buttonProcesarLookahead.ToolTip = "Procesa Look Ahead completo: Asigna semanas y actualiza membrete";
+            buttonProcesarLookahead.LongDescription = "Ejecuta el proceso completo de Look Ahead:\n1. Lee datos de Google Sheets y asigna semanas a elementos\n2. Actualiza automáticamente el membrete del plano LPS-S";
 
             return Result.Succeeded;
         }

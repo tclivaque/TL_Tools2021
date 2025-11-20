@@ -120,6 +120,7 @@
     <!-- Commands: Lookahead Management -->
     <Compile Include="Commands\LookaheadManagement\AsignarLookaheadCommand.cs" />
     <Compile Include="Commands\LookaheadManagement\MembreteLookaheadCommand.cs" />
+    <Compile Include="Commands\LookaheadManagement\ProcesarLookaheadCommand.cs" />
     <Compile Include="Commands\LookaheadManagement\Models\ActivityRule.cs" />
     <Compile Include="Commands\LookaheadManagement\Models\ScheduleData.cs" />
     <Compile Include="Commands\LookaheadManagement\Models\ScheduleGroup.cs" />
