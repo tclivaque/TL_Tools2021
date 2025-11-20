@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+	<AddIn Type="Application">
+		<Name>TL_Tools2021</Name>
+		<Assembly>CopiarParametrosRevit2021.dll</Assembly>
+		<AddInId>A1B2C3D4-E5F6-7890-ABCD-123456789ABC</AddInId>
+		<FullClassName>App</FullClassName>
+		<VendorId>TLV</VendorId>
+		<VendorDescription>Tito Livaque</VendorDescription>
+	</AddIn>
+</RevitAddIns>

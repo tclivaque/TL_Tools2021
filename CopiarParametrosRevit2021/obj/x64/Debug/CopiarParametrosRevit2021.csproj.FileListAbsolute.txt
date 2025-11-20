@@ -1,0 +1,6 @@
+C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\bin\x64\Debug\CopiarParametrosRevit2021.dll
+C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\bin\x64\Debug\CopiarParametrosRevit2021.pdb
+C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\obj\x64\Debug\CopiarParametrosRevit2021.csproj.AssemblyReference.cache
+C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\obj\x64\Debug\CopiarParametrosRevit2021.csproj.CoreCompileInputs.cache
+C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\obj\x64\Debug\CopiarParametrosRevit2021.dll
+C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\obj\x64\Debug\CopiarParametrosRevit2021.pdb
