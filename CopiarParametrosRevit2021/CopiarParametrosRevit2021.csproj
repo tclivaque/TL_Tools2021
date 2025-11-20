@@ -73,25 +73,32 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.cs" />
-    <Compile Include="CarsCommand.cs" />
-    <Compile Include="ConfigurarParametroCommand.cs" />
-    <Compile Include="ConfigurarParametrosCopiarCommand.cs" />
-    <Compile Include="CopiarParametrosConfiguradosCommand.cs" />
-    <Compile Include="DarFormatoCommand.cs" />
-    <Compile Include="EjecutarOverrideCommand.cs" />
-    <Compile Include="EnCursoCommand.cs" />
-    <Compile Include="GoogleSheetsHelper.cs" />
-    <Compile Include="LeyendaEventHandler.cs" />
+    <!-- Commands: Progress Management -->
+    <Compile Include="Commands\ProgressManagement\ValorizacionCommand.cs" />
+    <Compile Include="Commands\ProgressManagement\EnCursoCommand.cs" />
+    <Compile Include="Commands\ProgressManagement\CarsCommand.cs" />
+    <Compile Include="Commands\ProgressManagement\TarrajeoCommand.cs" />
+    <Compile Include="Commands\ProgressManagement\SolaqueoCommand.cs" />
+    <Compile Include="Commands\ProgressManagement\RestaurarCommand.cs" />
+    <!-- Commands: Parameter Copy -->
+    <Compile Include="Commands\ParameterCopy\ConfigurarParametrosCopiarCommand.cs" />
+    <Compile Include="Commands\ParameterCopy\CopiarParametrosConfiguradosCommand.cs" />
+    <!-- Commands: Parameter Review -->
+    <Compile Include="Commands\ParameterReview\ConfigurarParametroCommand.cs" />
+    <Compile Include="Commands\ParameterReview\EjecutarOverrideCommand.cs" />
+    <Compile Include="Commands\ParameterReview\ResetOverridesCommand.cs" />
+    <!-- Commands: Incident Management -->
+    <Compile Include="Commands\IncidentManagement\DarFormatoCommand.cs" />
+    <Compile Include="Commands\IncidentManagement\SDIProcessor.cs" />
+    <!-- UI -->
+    <Compile Include="UI\VentanaDetalle.cs" />
+    <Compile Include="UI\VentanaLeyenda.cs" />
+    <Compile Include="UI\VentanaResultadosSDI.cs" />
+    <Compile Include="UI\LeyendaEventHandler.cs" />
+    <!-- Helpers -->
+    <Compile Include="Helpers\GoogleSheetsHelper.cs" />
+    <!-- Properties -->
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ResetOverridesCommand.cs" />
-    <Compile Include="RestaurarCommand.cs" />
-    <Compile Include="SDIProcessor.cs" />
-    <Compile Include="SolaqueoCommand.cs" />
-    <Compile Include="TarrajeoCommand.cs" />
-    <Compile Include="ValorizacionCommand.cs" />
-    <Compile Include="VentanaDetalle.cs" />
-    <Compile Include="VentanaLeyenda.cs" />
-    <Compile Include="VentanaResultadosSDI.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="CopiarParametrosRevit2021.addin" />
