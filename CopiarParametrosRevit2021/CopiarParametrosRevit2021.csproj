@@ -70,6 +70,22 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
     <Reference Include="WindowsBase" />
+    <!-- Google Sheets API References -->
+    <Reference Include="Google.Apis">
+      <HintPath>..\packages\Google.Apis.1.68.0\lib\net45\Google.Apis.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Apis.Auth">
+      <HintPath>..\packages\Google.Apis.Auth.1.68.0\lib\net45\Google.Apis.Auth.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Apis.Core">
+      <HintPath>..\packages\Google.Apis.Core.1.68.0\lib\net45\Google.Apis.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Apis.Sheets.v4">
+      <HintPath>..\packages\Google.Apis.Sheets.v4.1.68.0.3421\lib\net45\Google.Apis.Sheets.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.cs" />
@@ -90,6 +106,19 @@
     <!-- Commands: Incident Management -->
     <Compile Include="Commands\IncidentManagement\DarFormatoCommand.cs" />
     <Compile Include="Commands\IncidentManagement\SDIProcessor.cs" />
+    <!-- Commands: Lookahead Management -->
+    <Compile Include="Commands\LookaheadManagement\AsignarLookaheadCommand.cs" />
+    <Compile Include="Commands\LookaheadManagement\MembreteLookaheadCommand.cs" />
+    <Compile Include="Commands\LookaheadManagement\Models\ActivityRule.cs" />
+    <Compile Include="Commands\LookaheadManagement\Models\ScheduleData.cs" />
+    <Compile Include="Commands\LookaheadManagement\Models\ScheduleGroup.cs" />
+    <Compile Include="Commands\LookaheadManagement\Services\StringUtils.cs" />
+    <Compile Include="Commands\LookaheadManagement\Services\GoogleSheetsService.cs" />
+    <Compile Include="Commands\LookaheadManagement\Services\ConfigReader.cs" />
+    <Compile Include="Commands\LookaheadManagement\Services\ElementCollectorService.cs" />
+    <Compile Include="Commands\LookaheadManagement\Services\ParameterService.cs" />
+    <Compile Include="Commands\LookaheadManagement\Services\FilterService.cs" />
+    <Compile Include="Commands\LookaheadManagement\Services\LookAheadProcessor.cs" />
     <!-- UI -->
     <Compile Include="UI\VentanaDetalle.cs" />
     <Compile Include="UI\VentanaLeyenda.cs" />
@@ -102,13 +131,21 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="CopiarParametrosRevit2021.addin" />
+    <!-- Google Sheets credentials: Add revitsheetsintegration-89c34b39c2ae.json file locally (not in repo) -->
+  </ItemGroup>
+  <ItemGroup Condition="Exists('revitsheetsintegration-89c34b39c2ae.json')">
+    <None Include="revitsheetsintegration-89c34b39c2ae.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>copy "$(TargetPath)" "C:\Users\$(USERNAME)\AppData\Roaming\Autodesk\Revit\Addins\2021\"
 copy "$(ProjectDir)CopiarParametrosRevit2021.addin" "C:\Users\$(USERNAME)\AppData\Roaming\Autodesk\Revit\Addins\2021\"
+if exist "$(ProjectDir)revitsheetsintegration-89c34b39c2ae.json" copy "$(ProjectDir)revitsheetsintegration-89c34b39c2ae.json" "C:\Users\$(USERNAME)\AppData\Roaming\Autodesk\Revit\Addins\2021\"
 mkdir "$(ProjectDir)Distribucion" 2&gt;nul
 copy "$(TargetPath)" "$(ProjectDir)Distribucion\"
-copy "$(ProjectDir)CopiarParametrosRevit2021.addin" "$(ProjectDir)Distribucion\"</PostBuildEvent>
+copy "$(ProjectDir)CopiarParametrosRevit2021.addin" "$(ProjectDir)Distribucion\"
+if exist "$(ProjectDir)revitsheetsintegration-89c34b39c2ae.json" copy "$(ProjectDir)revitsheetsintegration-89c34b39c2ae.json" "$(ProjectDir)Distribucion\"</PostBuildEvent>
   </PropertyGroup>
 </Project>

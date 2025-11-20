@@ -14,6 +14,7 @@ public class App : IExternalApplication
         string panelCopiar = "Copiar Valores de Parámetros";
         string panelRevision = "Revisión de Parámetros";
         string panelIncidenciasSDI = "INCIDENCIAS / SDI";
+        string panelLookahead = "LOOKAHEAD";
 
         try
         {
@@ -59,7 +60,7 @@ public class App : IExternalApplication
             if (panelRev == null)
                 panelRev = application.CreateRibbonPanel(tabName, panelRevision);
 
-            // PANEL 4: INCIDENCIAS / SDI (NUEVO)
+            // PANEL 4: INCIDENCIAS / SDI
             RibbonPanel panelSDI = null;
             foreach (RibbonPanel p in application.GetRibbonPanels(tabName))
             {
@@ -71,6 +72,19 @@ public class App : IExternalApplication
             }
             if (panelSDI == null)
                 panelSDI = application.CreateRibbonPanel(tabName, panelIncidenciasSDI);
+
+            // PANEL 5: LOOKAHEAD
+            RibbonPanel panelLookaheadRibbon = null;
+            foreach (RibbonPanel p in application.GetRibbonPanels(tabName))
+            {
+                if (p.Name == panelLookahead)
+                {
+                    panelLookaheadRibbon = p;
+                    break;
+                }
+            }
+            if (panelLookaheadRibbon == null)
+                panelLookaheadRibbon = application.CreateRibbonPanel(tabName, panelLookahead);
 
             // Ruta al ensamblado actual
             string path = Assembly.GetExecutingAssembly().Location;
@@ -180,7 +194,7 @@ public class App : IExternalApplication
             buttonReset.ToolTip = "Restablece overrides gráficos de todos los elementos";
             buttonReset.LongDescription = "Elimina todas las sobreescrituras gráficas aplicadas a los elementos en la vista actual.";
 
-            // ============ PANEL 4: INCIDENCIAS / SDI (NUEVO) ============
+            // ============ PANEL 4: INCIDENCIAS / SDI ============
 
             // BOTÓN 12: Dar formato
             PushButtonData buttonDataDarFormato = new PushButtonData("btnDarFormato",
@@ -190,6 +204,26 @@ public class App : IExternalApplication
             PushButton buttonDarFormato = panelSDI.AddItem(buttonDataDarFormato) as PushButton;
             buttonDarFormato.ToolTip = "Estandariza formato de SDI e Incidencias";
             buttonDarFormato.LongDescription = "Importa datos de Google Sheets y estandariza los parámetros NUMERO DE SDI, TIPO DE MODIFICACION y MODIFICADO en todos los elementos del modelo.";
+
+            // ============ PANEL 5: LOOKAHEAD ============
+
+            // BOTÓN 13: Asignar
+            PushButtonData buttonDataAsignarLookahead = new PushButtonData("btnAsignarLookahead",
+                                                                           "Asignar",
+                                                                           path,
+                                                                           "TL_Tools2021.Commands.LookaheadManagement.AsignarLookaheadCommand");
+            PushButton buttonAsignarLookahead = panelLookaheadRibbon.AddItem(buttonDataAsignarLookahead) as PushButton;
+            buttonAsignarLookahead.ToolTip = "Asigna Look Ahead a elementos del modelo";
+            buttonAsignarLookahead.LongDescription = "Lee datos de Google Sheets y asigna semanas de Look Ahead a elementos según configuración de actividades y disciplinas.";
+
+            // BOTÓN 14: Membrete
+            PushButtonData buttonDataMembreteLookahead = new PushButtonData("btnMembreteLookahead",
+                                                                            "Membrete",
+                                                                            path,
+                                                                            "TL_Tools2021.Commands.LookaheadManagement.MembreteLookaheadCommand");
+            PushButton buttonMembreteLookahead = panelLookaheadRibbon.AddItem(buttonDataMembreteLookahead) as PushButton;
+            buttonMembreteLookahead.ToolTip = "Actualiza membrete del plano Look Ahead";
+            buttonMembreteLookahead.LongDescription = "Actualiza automáticamente el membrete del plano LPS-S con la información del proyecto, semana y activo correspondiente.";
 
             return Result.Succeeded;
         }
