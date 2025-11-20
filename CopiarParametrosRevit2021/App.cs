@@ -13,8 +13,8 @@ public class App : IExternalApplication
         string panelAvanceValorizacion = "Planos de Avance y Valorización";
         string panelCopiar = "Copiar Valores de Parámetros";
         string panelRevision = "Revisión de Parámetros";
-        string panelIncidenciasSDI = "INCIDENCIAS / SDI";
-        string panelLookahead = "LOOKAHEAD";
+        string panelIncidenciasSDI = "Incidencias/SDI";
+        string panelLookahead = "Lookahead";
 
         try
         {
@@ -147,18 +147,18 @@ public class App : IExternalApplication
 
             // ============ PANEL 2: COPIAR VALORES DE PARÁMETROS ============
 
-            // BOTÓN 7: Configurar Parámetros
+            // BOTÓN 7: ⚙️Copiar
             PushButtonData buttonDataConfigCopiar = new PushButtonData("btnConfigParametrosCopiar",
-                                                                       "Configurar\nParámetros",
+                                                                       "⚙️Copiar",
                                                                        path,
                                                                        "ConfigurarParametrosCopiarCommand");
             PushButton buttonConfigCopiar = panelCopiarValores.AddItem(buttonDataConfigCopiar) as PushButton;
             buttonConfigCopiar.ToolTip = "Configura qué parámetros se copiarán";
             buttonConfigCopiar.LongDescription = "Define la lista de parámetros que se copiarán de un elemento fuente a destino.";
 
-            // BOTÓN 8: Copiar
+            // BOTÓN 8: Copiar Valores
             PushButtonData buttonDataCopiar = new PushButtonData("btnCopiar",
-                                                                "Copiar",
+                                                                "Copiar\nValores",
                                                                 path,
                                                                 "CopiarParametrosConfiguradosCommand");
             PushButton buttonCopiar = panelCopiarValores.AddItem(buttonDataCopiar) as PushButton;
@@ -167,9 +167,9 @@ public class App : IExternalApplication
 
             // ============ PANEL 3: REVISIÓN DE PARÁMETROS ============
 
-            // BOTÓN 9: Configurar Parámetro
+            // BOTÓN 9: ⚙️ Revisión
             PushButtonData buttonDataConfigurar = new PushButtonData("btnConfigurarParametro",
-                                                                    "Configurar\nParámetro",
+                                                                    "⚙️ Revisión",
                                                                     path,
                                                                     "ConfigurarParametroCommand");
             PushButton buttonConfigurar = panelRev.AddItem(buttonDataConfigurar) as PushButton;
@@ -207,14 +207,14 @@ public class App : IExternalApplication
 
             // ============ PANEL 5: LOOKAHEAD ============
 
-            // BOTÓN 13: Procesar Look Ahead (Asignar + Membrete)
+            // BOTÓN 13: Procesar Lookahead (Asignar + Membrete)
             PushButtonData buttonDataProcesarLookahead = new PushButtonData("btnProcesarLookahead",
-                                                                            "Procesar\nLook Ahead",
+                                                                            "Procesar\nLookahead",
                                                                             path,
                                                                             "TL_Tools2021.Commands.LookaheadManagement.ProcesarLookaheadCommand");
             PushButton buttonProcesarLookahead = panelLookaheadRibbon.AddItem(buttonDataProcesarLookahead) as PushButton;
-            buttonProcesarLookahead.ToolTip = "Procesa Look Ahead completo: Asigna semanas y actualiza membrete";
-            buttonProcesarLookahead.LongDescription = "Ejecuta el proceso completo de Look Ahead:\n1. Lee datos de Google Sheets y asigna semanas a elementos\n2. Actualiza automáticamente el membrete del plano LPS-S";
+            buttonProcesarLookahead.ToolTip = "Procesa Lookahead completo: Asigna semanas y actualiza membrete";
+            buttonProcesarLookahead.LongDescription = "Ejecuta el proceso completo de Lookahead:\n1. Lee datos de Google Sheets y asigna semanas a elementos\n2. Actualiza automáticamente el membrete del plano LPS-S";
 
             return Result.Succeeded;
         }
