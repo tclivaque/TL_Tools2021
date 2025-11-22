@@ -1,7 +1,9 @@
 using Autodesk.Revit.DB;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using TL_Tools2021.Commands.LookaheadManagement.Models;
 
 namespace TL_Tools2021.Commands.LookaheadManagement.Services
@@ -13,6 +15,12 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
         private readonly string _scheduleSheetName;
         private readonly string _configSheetName;
 
+        // DEBUG
+        private readonly StringBuilder _debugLog = new StringBuilder();
+        private readonly string _debugFilePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+            "ConfigReader_Debug.txt");
+
         public ConfigReader(GoogleSheetsService sheetsService, string spreadsheetId,
             string scheduleSheetName, string configSheetName)
         {
@@ -20,6 +28,18 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
             _spreadsheetId = spreadsheetId;
             _scheduleSheetName = scheduleSheetName;
             _configSheetName = configSheetName;
+
+            _debugLog.AppendLine($"=== DEBUG CONFIG READER - {DateTime.Now} ===");
+        }
+
+        private void Log(string message)
+        {
+            _debugLog.AppendLine(message);
+        }
+
+        public void SaveDebugLog()
+        {
+            File.WriteAllText(_debugFilePath, _debugLog.ToString());
         }
 
         public List<ActivityRule> ReadConfigRules()
@@ -70,43 +90,79 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
 
         public List<ScheduleData> ReadScheduleData(List<ActivityRule> rules, string activeId)
         {
+            Log($"\n=== ReadScheduleData ===");
+            Log($"ActiveId: '{activeId}'");
+            Log($"Total reglas recibidas: {rules.Count}");
+
             var data = new List<ScheduleData>();
             var headers = _sheetsService.ReadData(_spreadsheetId, $"'{_scheduleSheetName}'!1:1");
 
             if (headers == null || headers.Count == 0)
+            {
+                Log("ERROR: headers null o vacío");
                 return data;
+            }
 
             var headerRow = headers[0];
+            Log($"Headers encontrados: {headerRow.Count} columnas");
+
             int activityColumn = -1, startColumn = -1;
 
             for (int i = 0; i < headerRow.Count; i++)
             {
-                if (headerRow[i].ToString().Trim()
-                    .Equals("DESCRIPCIÓN DE LA ACTIVIDAD", StringComparison.OrdinalIgnoreCase))
+                string headerValue = headerRow[i]?.ToString()?.Trim() ?? "";
+                if (headerValue.Equals("DESCRIPCIÓN DE LA ACTIVIDAD", StringComparison.OrdinalIgnoreCase))
                 {
                     activityColumn = i;
                     startColumn = i + 1;
+                    Log($"Columna 'DESCRIPCIÓN DE LA ACTIVIDAD' encontrada en índice: {i}");
                     break;
                 }
             }
 
             if (activityColumn == -1)
+            {
+                Log("ERROR: Columna 'DESCRIPCIÓN DE LA ACTIVIDAD' no encontrada");
+                Log($"Headers disponibles: {string.Join(", ", headerRow.Select(h => $"'{h}'"))}");
                 throw new Exception("Columna 'DESCRIPCIÓN DE LA ACTIVIDAD' no encontrada");
+            }
 
             var rows = _sheetsService.ReadData(_spreadsheetId, $"'{_scheduleSheetName}'!A2:ZZ");
+            Log($"Filas leídas del LOOKAHEAD: {rows?.Count ?? 0}");
 
+            int rowIndex = 0;
             foreach (var row in rows)
             {
+                rowIndex++;
+
                 if (row.Count <= activityColumn)
+                {
+                    Log($"Fila {rowIndex}: SKIP - row.Count ({row.Count}) <= activityColumn ({activityColumn})");
                     continue;
+                }
 
                 string activityName = GetCell(row, activityColumn).ToLower();
                 if (string.IsNullOrWhiteSpace(activityName))
+                {
+                    Log($"Fila {rowIndex}: SKIP - activityName vacío");
                     continue;
+                }
 
+                Log($"\nFila {rowIndex}: Actividad = '{activityName}'");
+
+                // Buscar regla que coincida
                 var matchingRule = rules.FirstOrDefault(r => activityName.Contains(r.ActivityKeywords));
                 if (matchingRule == null)
+                {
+                    Log($"  NO MATCH: Ninguna regla coincide. Keywords buscados:");
+                    foreach (var r in rules)
+                    {
+                        Log($"    - '{r.ActivityKeywords}' contenido en '{activityName}'? {activityName.Contains(r.ActivityKeywords)}");
+                    }
                     continue;
+                }
+
+                Log($"  MATCH con regla: '{matchingRule.ActivityKeywords}' (Disciplinas: {string.Join(",", matchingRule.Disciplines)})");
 
                 var scheduleData = new ScheduleData
                 {
@@ -117,6 +173,8 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                 bool isSitio = IsSitio(matchingRule.FuncionFiltroEspecial) ||
                     activityName.Contains("exterior") ||
                     activityName.Contains("podotactil");
+
+                Log($"  IsSitio={isSitio} (FuncionFiltro='{matchingRule.FuncionFiltroEspecial}', exterior={activityName.Contains("exterior")}, podotactil={activityName.Contains("podotactil")})");
 
                 var groups = new Dictionary<string, ScheduleGroup>();
 
@@ -131,6 +189,8 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                     if (week == null)
                         continue;
 
+                    Log($"    Columna {i}: valor='{value}', week={week}");
+
                     string key = "";
                     bool valid = false;
 
@@ -141,6 +201,11 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                         {
                             key = value.Replace(" ", "").ToUpper();
                             valid = true;
+                            Log($"      SITIO: PLAT encontrado -> key='{key}'");
+                        }
+                        else
+                        {
+                            Log($"      SITIO: valor '{value}' NO empieza con PLAT");
                         }
                     }
                     else
@@ -153,7 +218,16 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                             {
                                 key = $"{parts[0].Trim().ToUpper()}|{parts[2].Trim().ToUpper()}";
                                 valid = true;
+                                Log($"      ACTIVO: ID '{activeId}' encontrado -> key='{key}'");
                             }
+                            else
+                            {
+                                Log($"      ACTIVO: valor '{value}' contiene ID pero parts.Length={parts.Length} < 3");
+                            }
+                        }
+                        else
+                        {
+                            Log($"      ACTIVO: valor '{value}' NO contiene activeId '{activeId}'");
                         }
                     }
 
@@ -176,13 +250,25 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                     }
                 }
 
+                Log($"  Grupos generados: {groups.Count}");
+                foreach (var g in groups)
+                {
+                    Log($"    - Key='{g.Key}', Sector='{g.Value.Sector}', Nivel='{g.Value.Nivel}', Weeks={string.Join(",", g.Value.WeekCounts.Select(w => $"{w.Key}:{w.Value}"))}");
+                }
+
                 if (groups.Any())
                 {
                     scheduleData.Groups.AddRange(groups.Values);
                     data.Add(scheduleData);
+                    Log($"  AGREGADO a data");
+                }
+                else
+                {
+                    Log($"  NO AGREGADO: sin grupos válidos");
                 }
             }
 
+            Log($"\n=== Fin ReadScheduleData: {data.Count} ScheduleData generados ===");
             return data;
         }
 
