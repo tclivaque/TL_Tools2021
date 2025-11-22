@@ -1,6 +1,7 @@
 using Autodesk.Revit.DB;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -40,6 +41,27 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
         public void SaveDebugLog()
         {
             File.WriteAllText(_debugFilePath, _debugLog.ToString());
+        }
+
+        /// <summary>
+        /// Remueve tildes/acentos de un string para comparación
+        /// </summary>
+        private string RemoveAccents(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return text;
+
+            var normalized = text.Normalize(NormalizationForm.FormD);
+            var sb = new StringBuilder();
+
+            foreach (char c in normalized)
+            {
+                var category = CharUnicodeInfo.GetUnicodeCategory(c);
+                if (category != UnicodeCategory.NonSpacingMark)
+                    sb.Append(c);
+            }
+
+            return sb.ToString().Normalize(NormalizationForm.FormC);
         }
 
         public List<ActivityRule> ReadConfigRules()
@@ -150,19 +172,27 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
 
                 Log($"\nFila {rowIndex}: Actividad = '{activityName}'");
 
-                // Buscar regla que coincida
-                var matchingRule = rules.FirstOrDefault(r => activityName.Contains(r.ActivityKeywords));
+                // Normalizar actividad (remover tildes) para comparación
+                string activityNameNormalized = RemoveAccents(activityName);
+
+                // Buscar regla que coincida - seleccionar la más específica (keyword más largo)
+                var matchingRule = rules
+                    .Where(r => activityNameNormalized.Contains(RemoveAccents(r.ActivityKeywords)))
+                    .OrderByDescending(r => r.ActivityKeywords.Length)
+                    .FirstOrDefault();
+
                 if (matchingRule == null)
                 {
                     Log($"  NO MATCH: Ninguna regla coincide. Keywords buscados:");
                     foreach (var r in rules)
                     {
-                        Log($"    - '{r.ActivityKeywords}' contenido en '{activityName}'? {activityName.Contains(r.ActivityKeywords)}");
+                        string kwNormalized = RemoveAccents(r.ActivityKeywords);
+                        Log($"    - '{r.ActivityKeywords}' ({kwNormalized}) contenido en '{activityName}' ({activityNameNormalized})? {activityNameNormalized.Contains(kwNormalized)}");
                     }
                     continue;
                 }
 
-                Log($"  MATCH con regla: '{matchingRule.ActivityKeywords}' (Disciplinas: {string.Join(",", matchingRule.Disciplines)})");
+                Log($"  MATCH con regla: '{matchingRule.ActivityKeywords}' (Disciplinas: {string.Join(",", matchingRule.Disciplines)}) [más específica]");
 
                 var scheduleData = new ScheduleData
                 {
@@ -171,10 +201,10 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                 };
 
                 bool isSitio = IsSitio(matchingRule.FuncionFiltroEspecial) ||
-                    activityName.Contains("exterior") ||
-                    activityName.Contains("podotactil");
+                    activityNameNormalized.Contains("exterior") ||
+                    activityNameNormalized.Contains("podotactil");
 
-                Log($"  IsSitio={isSitio} (FuncionFiltro='{matchingRule.FuncionFiltroEspecial}', exterior={activityName.Contains("exterior")}, podotactil={activityName.Contains("podotactil")})");
+                Log($"  IsSitio={isSitio} (FuncionFiltro='{matchingRule.FuncionFiltroEspecial}', exterior={activityNameNormalized.Contains("exterior")}, podotactil={activityNameNormalized.Contains("podotactil")})");
 
                 var groups = new Dictionary<string, ScheduleGroup>();
 
