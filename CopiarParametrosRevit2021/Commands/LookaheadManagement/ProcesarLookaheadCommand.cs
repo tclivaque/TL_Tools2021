@@ -89,6 +89,9 @@ namespace TL_Tools2021.Commands.LookaheadManagement
 
                 var scheduleData = configReader.ReadScheduleData(configRules, activeId);
 
+                // DEBUG: Guardar log de ConfigReader
+                configReader.SaveDebugLog();
+
                 if (scheduleData == null || !scheduleData.Any())
                 {
                     resultMessage = $"No se encontraron datos para el activo '{activeId}' en la hoja LOOKAHEAD.";
