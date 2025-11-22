@@ -55,11 +55,6 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
             "buzon", "buzón"
         };
 
-        private readonly HashSet<string> _kwPodotactil = new HashSet<string>
-        {
-            "podotactil", "podotáctil"
-        };
-
         private readonly HashSet<string> _kwEscalera = new HashSet<string>
         {
             "escalera"
@@ -120,9 +115,6 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
 
                 case "FiltroBuzon":
                     return RunDescriptionFilter(element, "Assembly Description", _kwBuzon);
-
-                case "FiltroPisoPodotactil":
-                    return RunDescriptionFilter(element, "Assembly Description", _kwPodotactil);
             }
 
             return false;
