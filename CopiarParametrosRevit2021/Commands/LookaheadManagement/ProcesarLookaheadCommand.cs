@@ -135,6 +135,9 @@ namespace TL_Tools2021.Commands.LookaheadManagement
                     tg.Assimilate();
                 }
 
+                // DEBUG: Guardar log en escritorio
+                processor.SaveDebugLog();
+
                 resultMessage = "Look Ahead asignado correctamente.";
                 return Result.Succeeded;
             }
