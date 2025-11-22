@@ -115,7 +115,8 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                 };
 
                 bool isSitio = IsSitio(matchingRule.FuncionFiltroEspecial) ||
-                    activityName.Contains("exterior");
+                    activityName.Contains("exterior") ||
+                    activityName.Contains("podotactil");
 
                 var groups = new Dictionary<string, ScheduleGroup>();
 
