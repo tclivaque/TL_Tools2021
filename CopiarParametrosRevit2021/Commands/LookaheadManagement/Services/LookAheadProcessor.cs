@@ -116,9 +116,9 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                 }
                 else if (!_assignedIds.Contains(elem.Id))
                 {
-                    string lookAhead = _paramService.GetParameterValue(elem, "LOOK AHEAD").ToUpper();
-                    if (!lookAhead.Contains("SEM"))
-                        _paramService.SetParameterValue(elem, "LOOK AHEAD", "SA");
+                    // Siempre asignar "SA" si no fue asignado en esta ejecución
+                    // Esto sobrescribe valores anteriores (SEM XX) que ya no están en la programación actual
+                    _paramService.SetParameterValue(elem, "LOOK AHEAD", "SA");
                 }
             }
         }
