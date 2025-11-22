@@ -37,42 +37,23 @@ namespace TL_Tools2021.Commands.LookaheadManagement
             try
             {
                 // ============ PASO 1: ASIGNAR LOOK AHEAD ============
-                TaskDialog progressDialog = new TaskDialog("Procesando Look Ahead");
-                progressDialog.MainInstruction = "Ejecutando proceso completo de Look Ahead";
-                progressDialog.MainContent = "Paso 1/2: Asignando Look Ahead desde Google Sheets...";
-                progressDialog.Show();
-
                 Result asignacionResult = EjecutarAsignacion(doc, out string asignacionMsg);
 
                 if (asignacionResult == Result.Failed)
                 {
-                    TaskDialog.Show("Error", $"Error en asignación de Look Ahead:\n{asignacionMsg}");
+                    message = asignacionMsg;
                     return Result.Failed;
                 }
 
                 // ============ PASO 2: ACTUALIZAR MEMBRETE ============
-                progressDialog.MainContent = "Paso 2/2: Actualizando membrete del plano...";
-
                 Result membreteResult = EjecutarMembrete(doc, out string membreteMsg);
 
-                if (membreteResult == Result.Failed)
-                {
-                    TaskDialog.Show("Advertencia",
-                        $"Look Ahead asignado correctamente, pero hubo un error al actualizar el membrete:\n{membreteMsg}");
-                    return Result.Succeeded; // La asignación fue exitosa
-                }
-
-                // ============ RESULTADO FINAL ============
-                TaskDialog.Show("Éxito - Look Ahead Procesado",
-                    "✓ Look Ahead asignado correctamente\n" +
-                    "✓ Membrete actualizado correctamente\n\n" +
-                    membreteMsg);
-
+                // Continuar aunque falle el membrete (la asignación ya fue exitosa)
                 return Result.Succeeded;
             }
             catch (Exception ex)
             {
-                TaskDialog.Show("Error Crítico", $"Ocurrió un error:\n{ex.Message}");
+                message = ex.Message;
                 return Result.Failed;
             }
         }
