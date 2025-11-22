@@ -199,7 +199,8 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                 "FiltroCajaDesague",
                 "FiltroCajaPluvial",
                 "FiltroBuzon",
-                "FiltroPisoSitioCemento"
+                "FiltroPisoSitioCemento",
+                "FiltroPisoPodotactil"
             }.Contains(function);
         }
 
