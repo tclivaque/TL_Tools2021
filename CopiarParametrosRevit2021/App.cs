@@ -13,7 +13,8 @@ public class App : IExternalApplication
         string panelAvanceValorizacion = "Planos de Avance y Valorización";
         string panelCopiar = "Copiar Valores de Parámetros";
         string panelRevision = "Revisión de Parámetros";
-        string panelIncidenciasSDI = "INCIDENCIAS / SDI";
+        string panelIncidenciasSDI = "Incidencias/SDI";
+        string panelLookahead = "Lookahead";
 
         try
         {
@@ -59,7 +60,7 @@ public class App : IExternalApplication
             if (panelRev == null)
                 panelRev = application.CreateRibbonPanel(tabName, panelRevision);
 
-            // PANEL 4: INCIDENCIAS / SDI (NUEVO)
+            // PANEL 4: INCIDENCIAS / SDI
             RibbonPanel panelSDI = null;
             foreach (RibbonPanel p in application.GetRibbonPanels(tabName))
             {
@@ -71,6 +72,19 @@ public class App : IExternalApplication
             }
             if (panelSDI == null)
                 panelSDI = application.CreateRibbonPanel(tabName, panelIncidenciasSDI);
+
+            // PANEL 5: LOOKAHEAD
+            RibbonPanel panelLookaheadRibbon = null;
+            foreach (RibbonPanel p in application.GetRibbonPanels(tabName))
+            {
+                if (p.Name == panelLookahead)
+                {
+                    panelLookaheadRibbon = p;
+                    break;
+                }
+            }
+            if (panelLookaheadRibbon == null)
+                panelLookaheadRibbon = application.CreateRibbonPanel(tabName, panelLookahead);
 
             // Ruta al ensamblado actual
             string path = Assembly.GetExecutingAssembly().Location;
@@ -133,18 +147,18 @@ public class App : IExternalApplication
 
             // ============ PANEL 2: COPIAR VALORES DE PARÁMETROS ============
 
-            // BOTÓN 7: Configurar Parámetros
+            // BOTÓN 7: ⚙️Copiar
             PushButtonData buttonDataConfigCopiar = new PushButtonData("btnConfigParametrosCopiar",
-                                                                       "Configurar\nParámetros",
+                                                                       "⚙️Copiar",
                                                                        path,
                                                                        "ConfigurarParametrosCopiarCommand");
             PushButton buttonConfigCopiar = panelCopiarValores.AddItem(buttonDataConfigCopiar) as PushButton;
             buttonConfigCopiar.ToolTip = "Configura qué parámetros se copiarán";
             buttonConfigCopiar.LongDescription = "Define la lista de parámetros que se copiarán de un elemento fuente a destino.";
 
-            // BOTÓN 8: Copiar
+            // BOTÓN 8: Copiar Valores
             PushButtonData buttonDataCopiar = new PushButtonData("btnCopiar",
-                                                                "Copiar",
+                                                                "Copiar\nValores",
                                                                 path,
                                                                 "CopiarParametrosConfiguradosCommand");
             PushButton buttonCopiar = panelCopiarValores.AddItem(buttonDataCopiar) as PushButton;
@@ -153,9 +167,9 @@ public class App : IExternalApplication
 
             // ============ PANEL 3: REVISIÓN DE PARÁMETROS ============
 
-            // BOTÓN 9: Configurar Parámetro
+            // BOTÓN 9: ⚙️ Revisión
             PushButtonData buttonDataConfigurar = new PushButtonData("btnConfigurarParametro",
-                                                                    "Configurar\nParámetro",
+                                                                    "⚙️ Revisión",
                                                                     path,
                                                                     "ConfigurarParametroCommand");
             PushButton buttonConfigurar = panelRev.AddItem(buttonDataConfigurar) as PushButton;
@@ -180,7 +194,7 @@ public class App : IExternalApplication
             buttonReset.ToolTip = "Restablece overrides gráficos de todos los elementos";
             buttonReset.LongDescription = "Elimina todas las sobreescrituras gráficas aplicadas a los elementos en la vista actual.";
 
-            // ============ PANEL 4: INCIDENCIAS / SDI (NUEVO) ============
+            // ============ PANEL 4: INCIDENCIAS / SDI ============
 
             // BOTÓN 12: Dar formato
             PushButtonData buttonDataDarFormato = new PushButtonData("btnDarFormato",
@@ -190,6 +204,17 @@ public class App : IExternalApplication
             PushButton buttonDarFormato = panelSDI.AddItem(buttonDataDarFormato) as PushButton;
             buttonDarFormato.ToolTip = "Estandariza formato de SDI e Incidencias";
             buttonDarFormato.LongDescription = "Importa datos de Google Sheets y estandariza los parámetros NUMERO DE SDI, TIPO DE MODIFICACION y MODIFICADO en todos los elementos del modelo.";
+
+            // ============ PANEL 5: LOOKAHEAD ============
+
+            // BOTÓN 13: Procesar Lookahead (Asignar + Membrete)
+            PushButtonData buttonDataProcesarLookahead = new PushButtonData("btnProcesarLookahead",
+                                                                            "Procesar\nLookahead",
+                                                                            path,
+                                                                            "TL_Tools2021.Commands.LookaheadManagement.ProcesarLookaheadCommand");
+            PushButton buttonProcesarLookahead = panelLookaheadRibbon.AddItem(buttonDataProcesarLookahead) as PushButton;
+            buttonProcesarLookahead.ToolTip = "Procesa Lookahead completo: Asigna semanas y actualiza membrete";
+            buttonProcesarLookahead.LongDescription = "Ejecuta el proceso completo de Lookahead:\n1. Lee datos de Google Sheets y asigna semanas a elementos\n2. Actualiza automáticamente el membrete del plano LPS-S";
 
             return Result.Succeeded;
         }
