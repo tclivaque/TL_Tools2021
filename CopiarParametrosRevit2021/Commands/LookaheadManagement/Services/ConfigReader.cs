@@ -246,7 +246,7 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                     }
                     else
                     {
-                        // Lógica ACTIVO (Busca el ID 282369)
+                        // Lógica ACTIVO (Busca el ID 282354)
                         if (cellValue.Contains(activeId))
                         {
                             var parts = cellValue.Split('-');
