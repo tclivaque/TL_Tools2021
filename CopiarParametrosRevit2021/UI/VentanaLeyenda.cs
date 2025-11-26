@@ -16,6 +16,8 @@ public class VentanaLeyenda : Window
     private static VentanaLeyenda _instancia;
     private LeyendaEventHandler _eventHandler;
     private ExternalEvent _externalEvent;
+    private OverrideCommandEventHandler _overrideEventHandler;
+    private ExternalEvent _overrideExternalEvent;
     private StackPanel _panelLeyenda;
     private Button _btnMostrarTodos;
     private System.Windows.Controls.Grid _menuLateral;
@@ -148,7 +150,7 @@ public class VentanaLeyenda : Window
             {
                 if (child is Button btn && btn != btnToggle)
                 {
-                    btn.Visibility = _menuExpanded ? Visibility.Visible : Visibility.Collapsed;
+                    btn.Visibility = _menuExpanded ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
                 }
             }
         };
@@ -247,16 +249,11 @@ public class VentanaLeyenda : Window
 
     private void EjecutarComandoConParametro(UIApplication app, string parametro)
     {
-        // Crear instancia del comando y ejecutarlo
-        var comando = new EjecutarOverrideCommand();
-        var commandData = new ExternalCommandData
+        // Ejecutar el comando usando el ExternalEvent
+        if (_overrideExternalEvent != null)
         {
-            Application = app
-        };
-
-        string mensaje = "";
-        ElementSet elementos = new ElementSet();
-        comando.Execute(commandData, ref mensaje, elementos);
+            _overrideExternalEvent.Raise();
+        }
     }
 
     public void InicializarEventHandler(UIApplication app)
@@ -266,6 +263,11 @@ public class VentanaLeyenda : Window
         {
             _eventHandler = new LeyendaEventHandler();
             _externalEvent = ExternalEvent.Create(_eventHandler);
+        }
+        if (_overrideEventHandler == null)
+        {
+            _overrideEventHandler = new OverrideCommandEventHandler();
+            _overrideExternalEvent = ExternalEvent.Create(_overrideEventHandler);
         }
     }
 
