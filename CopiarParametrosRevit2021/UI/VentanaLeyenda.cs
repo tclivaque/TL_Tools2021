@@ -18,7 +18,7 @@ public class VentanaLeyenda : Window
     private ExternalEvent _externalEvent;
     private StackPanel _panelLeyenda;
     private Button _btnMostrarTodos;
-    private Grid _menuLateral;
+    private System.Windows.Controls.Grid _menuLateral;
     private bool _menuExpanded = true;
     private string _parametroActivo = "";
     private UIApplication _uiApp;
@@ -85,20 +85,20 @@ public class VentanaLeyenda : Window
         };
 
         // Grid principal con 2 columnas (menú lateral + contenido principal)
-        Grid gridPrincipal = new Grid();
+        System.Windows.Controls.Grid gridPrincipal = new System.Windows.Controls.Grid();
         gridPrincipal.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });  // Menú lateral
         gridPrincipal.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });  // Contenido
 
         // === MENÚ LATERAL ===
         _menuLateral = CrearMenuLateral();
-        Grid.SetColumn(_menuLateral, 0);
+        System.Windows.Controls.Grid.SetColumn(_menuLateral, 0);
         gridPrincipal.Children.Add(_menuLateral);
 
         // === CONTENIDO PRINCIPAL (Leyenda) ===
-        Grid gridLeyenda = new Grid();
+        System.Windows.Controls.Grid gridLeyenda = new System.Windows.Controls.Grid();
         gridLeyenda.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         gridLeyenda.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        Grid.SetColumn(gridLeyenda, 1);
+        System.Windows.Controls.Grid.SetColumn(gridLeyenda, 1);
 
         ScrollViewer scrollViewer = new ScrollViewer();
         scrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
@@ -106,14 +106,14 @@ public class VentanaLeyenda : Window
         _panelLeyenda = new StackPanel();
         _panelLeyenda.Margin = new Thickness(10);
         scrollViewer.Content = _panelLeyenda;
-        Grid.SetRow(scrollViewer, 0);
+        System.Windows.Controls.Grid.SetRow(scrollViewer, 0);
 
         _btnMostrarTodos = new Button();
         _btnMostrarTodos.Content = "Mostrar Todos";
         _btnMostrarTodos.Height = 35;
         _btnMostrarTodos.Margin = new Thickness(10);
         _btnMostrarTodos.Click += BtnMostrarTodos_Click;
-        Grid.SetRow(_btnMostrarTodos, 1);
+        System.Windows.Controls.Grid.SetRow(_btnMostrarTodos, 1);
 
         gridLeyenda.Children.Add(scrollViewer);
         gridLeyenda.Children.Add(_btnMostrarTodos);
@@ -125,9 +125,9 @@ public class VentanaLeyenda : Window
         _parametroActivo = LeerParametroGuardado();
     }
 
-    private Grid CrearMenuLateral()
+    private System.Windows.Controls.Grid CrearMenuLateral()
     {
-        Grid menuGrid = new Grid();
+        System.Windows.Controls.Grid menuGrid = new System.Windows.Controls.Grid();
         menuGrid.Background = new SolidColorBrush(WpfColor.FromRgb(245, 245, 245));
         menuGrid.Width = 200;
 
