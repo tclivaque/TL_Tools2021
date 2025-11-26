@@ -136,6 +136,7 @@
     <Compile Include="UI\VentanaLeyenda.cs" />
     <Compile Include="UI\VentanaResultadosSDI.cs" />
     <Compile Include="UI\LeyendaEventHandler.cs" />
+    <Compile Include="UI\OverrideCommandEventHandler.cs" />
     <!-- Helpers -->
     <Compile Include="Helpers\GoogleSheetsHelper.cs" />
     <!-- Properties -->
