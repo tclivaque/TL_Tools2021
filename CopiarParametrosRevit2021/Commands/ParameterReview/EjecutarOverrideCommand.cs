@@ -14,6 +14,25 @@ public class EjecutarOverrideCommand : IExternalCommand
         "TL_Tools2021",
         "parametro_config.txt");
 
+    public static void ExecuteFromEvent(UIApplication uiApp)
+    {
+        UIDocument uidoc = uiApp.ActiveUIDocument;
+        if (uidoc == null)
+            return;
+
+        Document doc = uidoc.Document;
+        View vistaActiva = doc.ActiveView;
+
+        try
+        {
+            ExecuteLogic(uiApp, doc, vistaActiva);
+        }
+        catch (Exception ex)
+        {
+            TaskDialog.Show("Error", $"Error al aplicar override: {ex.Message}");
+        }
+    }
+
     public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
     {
         UIDocument uidoc = commandData.Application.ActiveUIDocument;
@@ -22,240 +41,7 @@ public class EjecutarOverrideCommand : IExternalCommand
 
         try
         {
-            // Leer parámetro configurado
-            string nombreParametro = LeerParametroGuardado();
-
-            if (string.IsNullOrWhiteSpace(nombreParametro))
-            {
-                return Result.Failed;
-            }
-
-            // Obtener todos los elementos visibles en la vista activa
-            FilteredElementCollector collector = new FilteredElementCollector(doc, vistaActiva.Id)
-                .WhereElementIsNotElementType();
-
-            // Filtrar elementos según criterios
-            List<Element> elementosFiltrados = new List<Element>();
-
-            foreach (Element elem in collector)
-            {
-                try
-                {
-                    // 1. Verificar que tenga categoría
-                    if (elem.Category == null)
-                        continue;
-
-                    // 2. Excluir categorías específicas
-                    string categoryName = elem.Category.Name;
-                    if (categoryName == "Cameras" || categoryName == "Piping Systems")
-                        continue;
-
-                    // 3. Solo categorías 3D (excluir anotaciones)
-                    if (elem.Category.CategoryType != CategoryType.Model)
-                        continue;
-
-                    // 4. Verificar visibilidad
-                    if (!elem.IsHidden(vistaActiva) && vistaActiva.CanCategoryBeHidden(elem.Category.Id))
-                    {
-                        elementosFiltrados.Add(elem);
-                    }
-                    else if (!vistaActiva.CanCategoryBeHidden(elem.Category.Id))
-                    {
-                        // Elementos de categorías que no se pueden ocultar (siempre visibles)
-                        elementosFiltrados.Add(elem);
-                    }
-                }
-                catch
-                {
-                    // Si hay error verificando, omitir el elemento
-                    continue;
-                }
-            }
-
-            Dictionary<string, List<ElementId>> elementosPorValor = new Dictionary<string, List<ElementId>>();
-            List<ElementId> elementosSinValor = new List<ElementId>();
-            Dictionary<string, Color> coloresPorValor = new Dictionary<string, Color>();
-
-            foreach (Element elem in elementosFiltrados)
-            {
-                bool tieneValorValido = false;
-
-                // Intentar obtener el parámetro (primero de ejemplar, luego de tipo)
-                Parameter param = elem.LookupParameter(nombreParametro);
-
-                if (param == null)
-                {
-                    // Intentar con el tipo del elemento
-                    ElementId typeId = elem.GetTypeId();
-                    if (typeId != ElementId.InvalidElementId)
-                    {
-                        ElementType elemType = doc.GetElement(typeId) as ElementType;
-                        if (elemType != null)
-                        {
-                            param = elemType.LookupParameter(nombreParametro);
-                        }
-                    }
-                }
-
-                // Si encontró el parámetro, verificar si tiene valor válido
-                if (param != null)
-                {
-                    string valorParametro = ObtenerValorComoString(param);
-
-                    if (!string.IsNullOrWhiteSpace(valorParametro))
-                    {
-                        // Tiene valor válido
-                        if (!elementosPorValor.ContainsKey(valorParametro))
-                        {
-                            elementosPorValor[valorParametro] = new List<ElementId>();
-                        }
-                        elementosPorValor[valorParametro].Add(elem.Id);
-                        tieneValorValido = true;
-                    }
-                }
-
-                // Si no tiene valor válido, agregarlo a elementos sin valor
-                if (!tieneValorValido)
-                {
-                    elementosSinValor.Add(elem.Id);
-                }
-            }
-
-            using (Transaction trans = new Transaction(doc, "Aplicar Override por Parámetro"))
-            {
-                trans.Start();
-
-                // Ordenar valores alfabéticamente y asignar colores secuencialmente
-                var valoresOrdenados = elementosPorValor.Keys.OrderBy(v => v).ToList();
-
-                for (int i = 0; i < valoresOrdenados.Count; i++)
-                {
-                    string valor = valoresOrdenados[i];
-                    List<ElementId> elementIds = elementosPorValor[valor];
-
-                    // Generar color según posición alfabética
-                    Color colorFondo = GenerarColorPorIndice(i);
-
-                    // Guardar color para la leyenda
-                    coloresPorValor[valor] = colorFondo;
-
-                    // Calcular color para líneas (más oscuro - cada componente RGB / 2 redondeado hacia arriba)
-                    Color colorLineas = new Color(
-                        (byte)((colorFondo.Red + 1) * 9 / 10),
-                        (byte)((colorFondo.Green + 1) * 9 / 10),
-                        (byte)((colorFondo.Blue + 1) * 9 / 10)
-                    );
-
-                    // Crear configuración de override
-                    OverrideGraphicSettings overrideSettings = new OverrideGraphicSettings();
-
-                    // Obtener patrones
-                    ElementId solidFillPatternId = GetSolidFillPatternId(doc);
-                    ElementId solidLinePatternId = GetSolidLinePatternId(doc);
-
-                    // Configurar projection lines - color más oscuro que el fondo, weight 16
-                    overrideSettings.SetProjectionLineColor(colorLineas);
-                    overrideSettings.SetProjectionLineWeight(16);
-                    if (solidLinePatternId != null && solidLinePatternId != ElementId.InvalidElementId)
-                    {
-                        overrideSettings.SetProjectionLinePatternId(solidLinePatternId);
-                    }
-
-                    // Configurar cut lines - mismo color y patrón que projection lines
-                    overrideSettings.SetCutLineColor(colorLineas);
-                    overrideSettings.SetCutLineWeight(16);
-                    if (solidLinePatternId != null && solidLinePatternId != ElementId.InvalidElementId)
-                    {
-                        overrideSettings.SetCutLinePatternId(solidLinePatternId);
-                    }
-
-                    // Configurar surface foreground pattern - color generado original
-                    if (solidFillPatternId != null && solidFillPatternId != ElementId.InvalidElementId)
-                    {
-                        overrideSettings.SetSurfaceForegroundPatternId(solidFillPatternId);
-                        overrideSettings.SetSurfaceForegroundPatternColor(colorFondo);
-                        overrideSettings.SetSurfaceForegroundPatternVisible(true);
-                    }
-
-                    // Configurar cut patterns - mismo patrón y color que surface
-                    if (solidFillPatternId != null && solidFillPatternId != ElementId.InvalidElementId)
-                    {
-                        overrideSettings.SetCutForegroundPatternId(solidFillPatternId);
-                        overrideSettings.SetCutForegroundPatternColor(colorFondo);
-                        overrideSettings.SetCutForegroundPatternVisible(true);
-                    }
-
-                    // Aplicar override a cada elemento
-                    foreach (ElementId elemId in elementIds)
-                    {
-                        vistaActiva.SetElementOverrides(elemId, overrideSettings);
-                    }
-                }
-
-                // Aplicar color rojo a elementos sin valor
-                if (elementosSinValor.Count > 0)
-                {
-                    Color colorRojoFondo = new Color(255, 0, 0);
-                    Color colorRojoLineas = new Color(127, 0, 0); // 255/2 redondeado
-
-                    OverrideGraphicSettings overrideRojo = new OverrideGraphicSettings();
-
-                    // Obtener patrones
-                    ElementId solidFillPatternId = GetSolidFillPatternId(doc);
-                    ElementId solidLinePatternId = GetSolidLinePatternId(doc);
-
-                    // Configurar projection lines
-                    overrideRojo.SetProjectionLineColor(colorRojoLineas);
-                    overrideRojo.SetProjectionLineWeight(16);
-                    if (solidLinePatternId != null && solidLinePatternId != ElementId.InvalidElementId)
-                    {
-                        overrideRojo.SetProjectionLinePatternId(solidLinePatternId);
-                    }
-
-                    // Configurar cut lines
-                    overrideRojo.SetCutLineColor(colorRojoLineas);
-                    overrideRojo.SetCutLineWeight(16);
-                    if (solidLinePatternId != null && solidLinePatternId != ElementId.InvalidElementId)
-                    {
-                        overrideRojo.SetCutLinePatternId(solidLinePatternId);
-                    }
-
-                    // Configurar surface foreground pattern
-                    if (solidFillPatternId != null && solidFillPatternId != ElementId.InvalidElementId)
-                    {
-                        overrideRojo.SetSurfaceForegroundPatternId(solidFillPatternId);
-                        overrideRojo.SetSurfaceForegroundPatternColor(colorRojoFondo);
-                        overrideRojo.SetSurfaceForegroundPatternVisible(true);
-                    }
-
-                    // Configurar cut patterns
-                    if (solidFillPatternId != null && solidFillPatternId != ElementId.InvalidElementId)
-                    {
-                        overrideRojo.SetCutForegroundPatternId(solidFillPatternId);
-                        overrideRojo.SetCutForegroundPatternColor(colorRojoFondo);
-                        overrideRojo.SetCutForegroundPatternVisible(true);
-                    }
-
-                    // Aplicar a todos los elementos sin valor
-                    foreach (ElementId elemId in elementosSinValor)
-                    {
-                        vistaActiva.SetElementOverrides(elemId, overrideRojo);
-                    }
-                }
-
-                trans.Commit();
-            }
-
-            // Mostrar ventana de leyenda (modeless)
-            VentanaLeyenda ventana = VentanaLeyenda.ObtenerInstancia();
-            ventana.InicializarEventHandler(commandData.Application);
-            ventana.ActualizarLeyenda(elementosPorValor, elementosSinValor, coloresPorValor, vistaActiva);
-
-            if (!ventana.IsVisible)
-            {
-                ventana.Show();
-            }
-
+            ExecuteLogic(commandData.Application, doc, vistaActiva);
             return Result.Succeeded;
         }
         catch (Exception ex)
@@ -265,7 +51,244 @@ public class EjecutarOverrideCommand : IExternalCommand
         }
     }
 
-    private string LeerParametroGuardado()
+    private static void ExecuteLogic(UIApplication uiApp, Document doc, View vistaActiva)
+    {
+        // Leer parámetro configurado
+        string nombreParametro = LeerParametroGuardado();
+
+        if (string.IsNullOrWhiteSpace(nombreParametro))
+        {
+            throw new Exception("No se encontró un parámetro configurado.");
+        }
+
+        // Obtener todos los elementos visibles en la vista activa
+        FilteredElementCollector collector = new FilteredElementCollector(doc, vistaActiva.Id)
+            .WhereElementIsNotElementType();
+
+        // Filtrar elementos según criterios
+        List<Element> elementosFiltrados = new List<Element>();
+
+        foreach (Element elem in collector)
+        {
+            try
+            {
+                // 1. Verificar que tenga categoría
+                if (elem.Category == null)
+                    continue;
+
+                // 2. Excluir categorías específicas
+                string categoryName = elem.Category.Name;
+                if (categoryName == "Cameras" || categoryName == "Piping Systems")
+                    continue;
+
+                // 3. Solo categorías 3D (excluir anotaciones)
+                if (elem.Category.CategoryType != CategoryType.Model)
+                    continue;
+
+                // 4. Verificar visibilidad
+                if (!elem.IsHidden(vistaActiva) && vistaActiva.CanCategoryBeHidden(elem.Category.Id))
+                {
+                    elementosFiltrados.Add(elem);
+                }
+                else if (!vistaActiva.CanCategoryBeHidden(elem.Category.Id))
+                {
+                    // Elementos de categorías que no se pueden ocultar (siempre visibles)
+                    elementosFiltrados.Add(elem);
+                }
+            }
+            catch
+            {
+                // Si hay error verificando, omitir el elemento
+                continue;
+            }
+        }
+
+        Dictionary<string, List<ElementId>> elementosPorValor = new Dictionary<string, List<ElementId>>();
+        List<ElementId> elementosSinValor = new List<ElementId>();
+        Dictionary<string, Color> coloresPorValor = new Dictionary<string, Color>();
+
+        foreach (Element elem in elementosFiltrados)
+        {
+            bool tieneValorValido = false;
+
+            // Intentar obtener el parámetro (primero de ejemplar, luego de tipo)
+            Parameter param = elem.LookupParameter(nombreParametro);
+
+            if (param == null)
+            {
+                // Intentar con el tipo del elemento
+                ElementId typeId = elem.GetTypeId();
+                if (typeId != ElementId.InvalidElementId)
+                {
+                    ElementType elemType = doc.GetElement(typeId) as ElementType;
+                    if (elemType != null)
+                    {
+                        param = elemType.LookupParameter(nombreParametro);
+                    }
+                }
+            }
+
+            // Si encontró el parámetro, verificar si tiene valor válido
+            if (param != null)
+            {
+                string valorParametro = ObtenerValorComoString(param);
+
+                if (!string.IsNullOrWhiteSpace(valorParametro))
+                {
+                    // Tiene valor válido
+                    if (!elementosPorValor.ContainsKey(valorParametro))
+                    {
+                        elementosPorValor[valorParametro] = new List<ElementId>();
+                    }
+                    elementosPorValor[valorParametro].Add(elem.Id);
+                    tieneValorValido = true;
+                }
+            }
+
+            // Si no tiene valor válido, agregarlo a elementos sin valor
+            if (!tieneValorValido)
+            {
+                elementosSinValor.Add(elem.Id);
+            }
+        }
+
+        using (Transaction trans = new Transaction(doc, "Aplicar Override por Parámetro"))
+        {
+            trans.Start();
+
+            // Ordenar valores alfabéticamente y asignar colores secuencialmente
+            var valoresOrdenados = elementosPorValor.Keys.OrderBy(v => v).ToList();
+
+            for (int i = 0; i < valoresOrdenados.Count; i++)
+            {
+                string valor = valoresOrdenados[i];
+                List<ElementId> elementIds = elementosPorValor[valor];
+
+                // Generar color según posición alfabética
+                Color colorFondo = GenerarColorPorIndice(i);
+
+                // Guardar color para la leyenda
+                coloresPorValor[valor] = colorFondo;
+
+                // Calcular color para líneas (más oscuro - cada componente RGB / 2 redondeado hacia arriba)
+                Color colorLineas = new Color(
+                    (byte)((colorFondo.Red + 1) * 9 / 10),
+                    (byte)((colorFondo.Green + 1) * 9 / 10),
+                    (byte)((colorFondo.Blue + 1) * 9 / 10)
+                );
+
+                // Crear configuración de override
+                OverrideGraphicSettings overrideSettings = new OverrideGraphicSettings();
+
+                // Obtener patrones
+                ElementId solidFillPatternId = GetSolidFillPatternId(doc);
+                ElementId solidLinePatternId = GetSolidLinePatternId(doc);
+
+                // Configurar projection lines - color más oscuro que el fondo, weight 16
+                overrideSettings.SetProjectionLineColor(colorLineas);
+                overrideSettings.SetProjectionLineWeight(16);
+                if (solidLinePatternId != null && solidLinePatternId != ElementId.InvalidElementId)
+                {
+                    overrideSettings.SetProjectionLinePatternId(solidLinePatternId);
+                }
+
+                // Configurar cut lines - mismo color y patrón que projection lines
+                overrideSettings.SetCutLineColor(colorLineas);
+                overrideSettings.SetCutLineWeight(16);
+                if (solidLinePatternId != null && solidLinePatternId != ElementId.InvalidElementId)
+                {
+                    overrideSettings.SetCutLinePatternId(solidLinePatternId);
+                }
+
+                // Configurar surface foreground pattern - color generado original
+                if (solidFillPatternId != null && solidFillPatternId != ElementId.InvalidElementId)
+                {
+                    overrideSettings.SetSurfaceForegroundPatternId(solidFillPatternId);
+                    overrideSettings.SetSurfaceForegroundPatternColor(colorFondo);
+                    overrideSettings.SetSurfaceForegroundPatternVisible(true);
+                }
+
+                // Configurar cut patterns - mismo patrón y color que surface
+                if (solidFillPatternId != null && solidFillPatternId != ElementId.InvalidElementId)
+                {
+                    overrideSettings.SetCutForegroundPatternId(solidFillPatternId);
+                    overrideSettings.SetCutForegroundPatternColor(colorFondo);
+                    overrideSettings.SetCutForegroundPatternVisible(true);
+                }
+
+                // Aplicar override a cada elemento
+                foreach (ElementId elemId in elementIds)
+                {
+                    vistaActiva.SetElementOverrides(elemId, overrideSettings);
+                }
+            }
+
+            // Aplicar color rojo a elementos sin valor
+            if (elementosSinValor.Count > 0)
+            {
+                Color colorRojoFondo = new Color(255, 0, 0);
+                Color colorRojoLineas = new Color(127, 0, 0); // 255/2 redondeado
+
+                OverrideGraphicSettings overrideRojo = new OverrideGraphicSettings();
+
+                // Obtener patrones
+                ElementId solidFillPatternId = GetSolidFillPatternId(doc);
+                ElementId solidLinePatternId = GetSolidLinePatternId(doc);
+
+                // Configurar projection lines
+                overrideRojo.SetProjectionLineColor(colorRojoLineas);
+                overrideRojo.SetProjectionLineWeight(16);
+                if (solidLinePatternId != null && solidLinePatternId != ElementId.InvalidElementId)
+                {
+                    overrideRojo.SetProjectionLinePatternId(solidLinePatternId);
+                }
+
+                // Configurar cut lines
+                overrideRojo.SetCutLineColor(colorRojoLineas);
+                overrideRojo.SetCutLineWeight(16);
+                if (solidLinePatternId != null && solidLinePatternId != ElementId.InvalidElementId)
+                {
+                    overrideRojo.SetCutLinePatternId(solidLinePatternId);
+                }
+
+                // Configurar surface foreground pattern
+                if (solidFillPatternId != null && solidFillPatternId != ElementId.InvalidElementId)
+                {
+                    overrideRojo.SetSurfaceForegroundPatternId(solidFillPatternId);
+                    overrideRojo.SetSurfaceForegroundPatternColor(colorRojoFondo);
+                    overrideRojo.SetSurfaceForegroundPatternVisible(true);
+                }
+
+                // Configurar cut patterns
+                if (solidFillPatternId != null && solidFillPatternId != ElementId.InvalidElementId)
+                {
+                    overrideRojo.SetCutForegroundPatternId(solidFillPatternId);
+                    overrideRojo.SetCutForegroundPatternColor(colorRojoFondo);
+                    overrideRojo.SetCutForegroundPatternVisible(true);
+                }
+
+                // Aplicar a todos los elementos sin valor
+                foreach (ElementId elemId in elementosSinValor)
+                {
+                    vistaActiva.SetElementOverrides(elemId, overrideRojo);
+                }
+            }
+
+            trans.Commit();
+        }
+
+        // Mostrar ventana de leyenda (modeless)
+        VentanaLeyenda ventana = VentanaLeyenda.ObtenerInstancia();
+        ventana.InicializarEventHandler(uiApp);
+        ventana.ActualizarLeyenda(elementosPorValor, elementosSinValor, coloresPorValor, vistaActiva);
+
+        if (!ventana.IsVisible)
+        {
+            ventana.Show();
+        }
+    }
+
+    private static string LeerParametroGuardado()
     {
         try
         {
@@ -278,7 +301,7 @@ public class EjecutarOverrideCommand : IExternalCommand
         return string.Empty;
     }
 
-    private string ObtenerValorComoString(Parameter param)
+    private static string ObtenerValorComoString(Parameter param)
     {
         if (!param.HasValue)
             return string.Empty;
@@ -300,7 +323,7 @@ public class EjecutarOverrideCommand : IExternalCommand
         }
     }
 
-    private Color GenerarColorPorIndice(int indice)
+    private static Color GenerarColorPorIndice(int indice)
     {
         // Paleta de 80 colores de BIMcollab
         Color[] paletaBIMcollab = new Color[]
@@ -392,7 +415,7 @@ public class EjecutarOverrideCommand : IExternalCommand
         return paletaBIMcollab[indiceColor];
     }
 
-    private ElementId GetSolidFillPatternId(Document doc)
+    private static ElementId GetSolidFillPatternId(Document doc)
     {
         // Obtener patrón sólido usando FilteredElementCollector
         try
@@ -410,7 +433,7 @@ public class EjecutarOverrideCommand : IExternalCommand
         return ElementId.InvalidElementId;
     }
 
-    private ElementId GetSolidLinePatternId(Document doc)
+    private static ElementId GetSolidLinePatternId(Document doc)
     {
         // Usar el método estático GetSolidPatternId como en el código Python
         try
