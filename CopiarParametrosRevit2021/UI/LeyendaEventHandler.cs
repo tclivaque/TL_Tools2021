@@ -8,6 +8,7 @@ public class LeyendaEventHandler : IExternalEventHandler
 {
     public string ValorSeleccionado { get; set; }
     public bool MostrarTodos { get; set; }
+    public bool OcultarElementos { get; set; }  // Nueva propiedad
     public View VistaActiva { get; set; }
     public Dictionary<string, List<ElementId>> ElementosPorValor { get; set; }
     public List<ElementId> ElementosSinValor { get; set; }
@@ -22,7 +23,7 @@ public class LeyendaEventHandler : IExternalEventHandler
 
         try
         {
-            using (Transaction trans = new Transaction(doc, "Aislar elementos por valor"))
+            using (Transaction trans = new Transaction(doc, OcultarElementos ? "Ocultar elementos por valor" : "Aislar elementos por valor"))
             {
                 trans.Start();
 
@@ -33,28 +34,36 @@ public class LeyendaEventHandler : IExternalEventHandler
                 }
                 else if (!string.IsNullOrEmpty(ValorSeleccionado))
                 {
-                    // Primero restablecer la vista
-                    try
-                    {
-                        VistaActiva.DisableTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate);
-                    }
-                    catch { }
-
-                    // Luego aislar elementos con el valor seleccionado
-                    List<ElementId> elementosAMostrar = new List<ElementId>();
+                    List<ElementId> elementosTarget = new List<ElementId>();
 
                     if (ValorSeleccionado == "[SIN VALOR]" && ElementosSinValor != null)
                     {
-                        elementosAMostrar.AddRange(ElementosSinValor);
+                        elementosTarget.AddRange(ElementosSinValor);
                     }
                     else if (ElementosPorValor.ContainsKey(ValorSeleccionado))
                     {
-                        elementosAMostrar.AddRange(ElementosPorValor[ValorSeleccionado]);
+                        elementosTarget.AddRange(ElementosPorValor[ValorSeleccionado]);
                     }
 
-                    if (elementosAMostrar.Count > 0)
+                    if (elementosTarget.Count > 0)
                     {
-                        VistaActiva.IsolateElementsTemporary(elementosAMostrar);
+                        if (OcultarElementos)
+                        {
+                            // Ocultar elementos seleccionados
+                            VistaActiva.HideElementsTemporary(elementosTarget);
+                        }
+                        else
+                        {
+                            // Primero restablecer la vista
+                            try
+                            {
+                                VistaActiva.DisableTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate);
+                            }
+                            catch { }
+
+                            // Aislar elementos seleccionados
+                            VistaActiva.IsolateElementsTemporary(elementosTarget);
+                        }
                     }
                 }
 
@@ -63,7 +72,7 @@ public class LeyendaEventHandler : IExternalEventHandler
         }
         catch (Exception ex)
         {
-            TaskDialog.Show("Error", $"Error al aislar elementos: {ex.Message}");
+            TaskDialog.Show("Error", $"Error al {(OcultarElementos ? "ocultar" : "aislar")} elementos: {ex.Message}");
         }
     }
 
