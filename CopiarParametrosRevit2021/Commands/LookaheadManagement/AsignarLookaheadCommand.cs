@@ -61,7 +61,7 @@ namespace TL_Tools2021.Commands.LookaheadManagement
                     return Result.Failed;
                 }
 
-                var scheduleData = configReader.ReadScheduleData(configRules, activeId);
+                var scheduleData = configReader.ReadScheduleData(configRules);
 
                 if (scheduleData == null || !scheduleData.Any())
                 {

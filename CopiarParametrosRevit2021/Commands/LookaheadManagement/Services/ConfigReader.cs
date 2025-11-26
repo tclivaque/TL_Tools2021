@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using TL_Tools2021.Commands.LookaheadManagement.Models;
 using CopiarParametrosRevit2021.Helpers;
 
