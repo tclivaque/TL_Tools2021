@@ -2,11 +2,9 @@ using Autodesk.Revit.DB;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Text;
 using TL_Tools2021.Commands.LookaheadManagement.Models;
-using CopiarParametrosRevit2021.Helpers; // Asegúrate de que este namespace coincida con tu GoogleSheetsService unificado
+using CopiarParametrosRevit2021.Helpers;
 
 namespace TL_Tools2021.Commands.LookaheadManagement.Services
 {
@@ -17,10 +15,6 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
         private readonly string _scheduleSheetName;
         private readonly string _configSheetName;
 
-        // --- SISTEMA DE DEBUG ---
-        private readonly StringBuilder _debugLog = new StringBuilder();
-        private string _debugFilePath;
-
         public ConfigReader(GoogleSheetsService sheetsService, string spreadsheetId,
             string scheduleSheetName, string configSheetName)
         {
@@ -28,36 +22,6 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
             _spreadsheetId = spreadsheetId;
             _scheduleSheetName = scheduleSheetName;
             _configSheetName = configSheetName;
-        }
-
-        // Configura el nombre del archivo de log con el ID
-        public void InitializeDebug(string activeId)
-        {
-            _debugFilePath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-                $"Lookahead_Debug_{activeId}.txt");
-
-            _debugLog.Clear();
-            Log("==================================================");
-            Log($" INICIO DEBUG LOOKAHEAD - {DateTime.Now}");
-            Log($" ID BUSCADO: {activeId}");
-            Log($" Spreadsheet: {_spreadsheetId}");
-            Log("==================================================\n");
-        }
-
-        public void Log(string message)
-        {
-            _debugLog.AppendLine($"[{DateTime.Now:HH:mm:ss}] {message}");
-        }
-
-        public void SaveDebugLog()
-        {
-            try
-            {
-                if (!string.IsNullOrEmpty(_debugFilePath))
-                    File.WriteAllText(_debugFilePath, _debugLog.ToString());
-            }
-            catch { /* Ignorar errores de escritura de log */ }
         }
 
         private string RemoveAccents(string text)
@@ -75,24 +39,18 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
 
         public List<ActivityRule> ReadConfigRules()
         {
-            Log("[PASO 1] LEYENDO REGLAS DE CONFIGURACIÓN...");
             var rules = new List<ActivityRule>();
 
             try
             {
                 var values = _sheetsService.ReadData(_spreadsheetId, $"'{_configSheetName}'!A2:G");
-                Log($"-> Filas encontradas en config: {values.Count}");
 
-                int rowIndex = 2;
                 foreach (var row in values)
                 {
                     string keyword = GetCell(row, 0);
 
                     if (string.IsNullOrWhiteSpace(keyword))
-                    {
-                        rowIndex++;
                         continue;
-                    }
 
                     var rule = new ActivityRule
                     {
@@ -117,40 +75,31 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                             var bic = (BuiltInCategory)Enum.Parse(typeof(BuiltInCategory), c.Trim(), true);
                             rule.Categories.Add(bic);
                         }
-                        catch { Log($"   [WARN] Categoría inválida '{c}' en regla '{keyword}'"); }
+                        catch { /* Ignorar categorías inválidas */ }
                     }
 
                     if (rule.Categories.Any())
                     {
                         rules.Add(rule);
-                        Log($"   [OK] Regla cargada: '{keyword}' ({rule.Categories.Count} cats)");
                     }
-
-                    rowIndex++;
                 }
             }
             catch (Exception ex)
             {
-                Log($"[ERROR] Fallo leyendo reglas: {ex.Message}");
-                throw;
+                throw new Exception($"Error leyendo reglas: {ex.Message}", ex);
             }
 
-            Log($"-> Total reglas válidas: {rules.Count}\n");
             return rules;
         }
 
-        public List<ScheduleData> ReadScheduleData(List<ActivityRule> rules, string activeId)
+        public List<ScheduleData> ReadScheduleData(List<ActivityRule> rules)
         {
-            Log("[PASO 2] LEYENDO CRONOGRAMA Y BUSCANDO MATCH...");
             var data = new List<ScheduleData>();
 
             // 1. Leer Encabezados
             var headers = _sheetsService.ReadData(_spreadsheetId, $"'{_scheduleSheetName}'!1:1");
             if (headers == null || headers.Count == 0)
-            {
-                Log("[ERROR FATAL] No se leyeron encabezados.");
                 return data;
-            }
 
             var headerRow = headers[0];
             int activityColumn = -1, startColumn = -1;
@@ -163,31 +112,22 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                 {
                     activityColumn = i;
                     startColumn = i + 1;
-                    Log($"-> Columna Actividad: índice {i}");
-                    Log($"-> Inicio Semanas: índice {startColumn}");
                     break;
                 }
             }
 
             if (activityColumn == -1)
-            {
-                Log("[ERROR FATAL] Columna 'DESCRIPCIÓN DE LA ACTIVIDAD' no encontrada.");
-                throw new Exception("Columna Actividad no encontrada");
-            }
+                throw new Exception("Columna 'DESCRIPCIÓN DE LA ACTIVIDAD' no encontrada");
 
             // 2. Leer Datos (Hasta columna ZZ para asegurar rango)
             var rows = _sheetsService.ReadData(_spreadsheetId, $"'{_scheduleSheetName}'!A2:ZZ");
-            Log($"-> Filas de datos leídas: {rows?.Count ?? 0}");
-
-            int rowIndex = 2;
-            int matchesFound = 0;
 
             foreach (var row in rows)
             {
-                if (row.Count <= activityColumn) { rowIndex++; continue; }
+                if (row.Count <= activityColumn) continue;
 
                 string activityName = GetCell(row, activityColumn).ToLower();
-                if (string.IsNullOrWhiteSpace(activityName)) { rowIndex++; continue; }
+                if (string.IsNullOrWhiteSpace(activityName)) continue;
 
                 // --- LOGICA DE MATCHING DE REGLA ---
                 string activityNameNormalized = RemoveAccents(activityName);
@@ -207,12 +147,7 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                 }
 
                 if (matchingRule == null)
-                {
-                    // Descomentar para ver todo (puede generar mucho texto)
-                    // Log($"Fila {rowIndex}: '{activityName}' -> SIN REGLA"); 
-                    rowIndex++;
                     continue;
-                }
 
                 // --- REGLA ENCONTRADA ---
                 bool isSitio = IsSitio(matchingRule.FuncionFiltroEspecial) ||
@@ -220,9 +155,8 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                                activityNameNormalized.Contains("podotactil");
 
                 var groups = new Dictionary<string, ScheduleGroup>();
-                bool rowHasActiveId = false;
 
-                // --- BUSCAR EL ID EN LAS SEMANAS ---
+                // --- PROCESAR SEMANAS ---
                 for (int i = startColumn; i < row.Count && i < (startColumn + 30); i++)
                 {
                     string cellValue = GetCell(row, i);
@@ -246,21 +180,13 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                     }
                     else
                     {
-                        // Lógica ACTIVO (Busca el ID 282354)
-                        if (cellValue.Contains(activeId))
+                        // Lógica ACTIVO (Procesa cualquier celda con formato: SECTOR - ID - NIVEL)
+                        var parts = cellValue.Split('-');
+                        if (parts.Length >= 3)
                         {
-                            var parts = cellValue.Split('-');
-                            if (parts.Length >= 3)
-                            {
-                                // Asume formato: SECTOR - ID - NIVEL
-                                key = $"{parts[0].Trim().ToUpper()}|{parts[2].Trim().ToUpper()}";
-                                valid = true;
-                                rowHasActiveId = true;
-                            }
-                            else
-                            {
-                                Log($"   [WARN] Fila {rowIndex}: Celda '{cellValue}' tiene ID pero formato incorrecto.");
-                            }
+                            // Asume formato: SECTOR - ID - NIVEL
+                            key = $"{parts[0].Trim().ToUpper()}|{parts[2].Trim().ToUpper()}";
+                            valid = true;
                         }
                     }
 
@@ -280,12 +206,9 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                     }
                 }
 
-                // Solo si encontramos grupos válidos (match de ID) agregamos
+                // Solo si encontramos grupos válidos agregamos
                 if (groups.Any())
                 {
-                    Log($"[MATCH] Fila {rowIndex}: '{activityName}' -> Regla: '{matchingRule.ActivityKeywords}'");
-                    if (rowHasActiveId) Log($"       -> ¡ID {activeId} ENCONTRADO!");
-
                     var scheduleData = new ScheduleData
                     {
                         ActivityName = activityName,
@@ -293,13 +216,9 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                     };
                     scheduleData.Groups.AddRange(groups.Values);
                     data.Add(scheduleData);
-                    matchesFound++;
                 }
-
-                rowIndex++;
             }
 
-            Log($"\n[FIN] Total actividades procesadas con ID {activeId}: {matchesFound}");
             return data;
         }
 
