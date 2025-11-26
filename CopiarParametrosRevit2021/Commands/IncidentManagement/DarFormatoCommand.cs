@@ -69,7 +69,7 @@ public class DarFormatoCommand : IExternalCommand
                 VentanaResultadosSDI ventana = new VentanaResultadosSDI(resultados);
                 ventana.ShowDialog();
             }
-            catch (Exception ex)
+            catch (Exception) // <-- CORREGIDO: Se quitó la variable 'ex' que causaba la advertencia
             {
                 // Si falla la ventana, al menos mostrar el resumen en TaskDialog
                 TaskDialog.Show("Resultados del Procesamiento", resultados.GenerarResumen());

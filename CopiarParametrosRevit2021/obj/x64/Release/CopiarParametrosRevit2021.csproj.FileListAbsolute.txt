@@ -4,13 +4,6 @@ C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\o
 C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\obj\x64\Release\CopiarParametrosRevit2021.csproj.CoreCompileInputs.cache
 C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\obj\x64\Release\CopiarParametrosRevit2021.dll
 C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\obj\x64\Release\CopiarParametrosRevit2021.pdb
-C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\bin\x64\Release\Google.Apis.Auth.dll
-C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\bin\x64\Release\Google.Apis.Auth.PlatformServices.dll
-C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\bin\x64\Release\Google.Apis.Core.dll
-C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\bin\x64\Release\Google.Apis.dll
-C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\bin\x64\Release\Google.Apis.PlatformServices.dll
-C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\bin\x64\Release\Google.Apis.Sheets.v4.dll
-C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\bin\x64\Release\Newtonsoft.Json.dll
 C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\bin\x64\Release\System.CodeDom.dll
 C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\bin\x64\Release\Google.Apis.pdb
 C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\bin\x64\Release\Google.Apis.xml

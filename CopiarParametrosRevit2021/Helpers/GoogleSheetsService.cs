@@ -1,4 +1,4 @@
-using Google.Apis.Auth.OAuth2;
+Ôªøusing Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Google.Apis.Sheets.v4.Data;
@@ -8,14 +8,13 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 
-// AGREGADO: Namespace para organizar el cÛdigo
 namespace CopiarParametrosRevit2021.Helpers
 {
     public class GoogleSheetsService
     {
         private SheetsService _service;
 
-        // Ajusta el nombre del archivo JSON si es diferente
+        // Ajusta el nombre si tu archivo JSON es distinto
         private static readonly string CREDENTIALS_FILE = "revitsheetsintegration-89c34b39c2ae.json";
 
         public GoogleSheetsService()
@@ -27,18 +26,18 @@ namespace CopiarParametrosRevit2021.Helpers
         {
             try
             {
-                // Busca el JSON en la misma carpeta donde est· la DLL compilada
                 string assemblyPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                 string credentialPath = Path.Combine(assemblyPath, CREDENTIALS_FILE);
 
                 if (!File.Exists(credentialPath))
                 {
-                    throw new FileNotFoundException($"No se encontrÛ el archivo de credenciales en: {credentialPath}");
+                    throw new FileNotFoundException($"No se encontr√≥ el archivo de credenciales en: {credentialPath}");
                 }
 
                 GoogleCredential credential;
                 using (var stream = new FileStream(credentialPath, FileMode.Open, FileAccess.Read))
                 {
+                    // Usamos Scope completo para permitir lectura y escritura en todo el plugin
                     credential = GoogleCredential.FromStream(stream)
                         .CreateScoped(new[] { SheetsService.Scope.Spreadsheets });
                 }
@@ -46,47 +45,55 @@ namespace CopiarParametrosRevit2021.Helpers
                 _service = new SheetsService(new BaseClientService.Initializer()
                 {
                     HttpClientInitializer = credential,
-                    ApplicationName = "RevitPluginColors"
+                    ApplicationName = "RevitPluginUnified"
                 });
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error de autenticaciÛn con Google: {ex.Message}");
+                throw new Exception($"Error de autenticaci√≥n con Google: {ex.Message}");
             }
         }
 
         /// <summary>
-        /// Busca la variable "CATEGORIAS" en la columna A y devuelve la lista de categorÌas de la columna B.
+        /// M√©todo gen√©rico para leer cualquier rango (Usado por Lookahead y otros)
+        /// </summary>
+        public IList<IList<object>> ReadData(string spreadsheetId, string range)
+        {
+            try
+            {
+                var request = _service.Spreadsheets.Values.Get(spreadsheetId, range);
+                var response = request.Execute();
+                return response.Values ?? new List<IList<object>>();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error leyendo datos de Google Sheets: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// M√©todo espec√≠fico para leer la lista blanca de categor√≠as (Usado por Auditor√≠a/Colores)
         /// </summary>
         public List<string> ObtenerCategoriasDesdeSheet(string spreadsheetId, string sheetName)
         {
             try
             {
-                // Leemos columnas A y B de la hoja
+                // Reutilizamos ReadData para no repetir l√≥gica
                 string range = $"'{sheetName}'!A:B";
-                SpreadsheetsResource.ValuesResource.GetRequest request =
-                    _service.Spreadsheets.Values.Get(spreadsheetId, range);
-
-                ValueRange response = request.Execute();
-                IList<IList<object>> values = response.Values;
+                var values = ReadData(spreadsheetId, range);
 
                 if (values != null && values.Count > 0)
                 {
                     foreach (var row in values)
                     {
-                        // Necesitamos al menos 2 columnas (A y B)
                         if (row.Count < 2) continue;
 
                         string key = row[0]?.ToString()?.Trim().ToUpper();
-
                         if (key == "CATEGORIAS")
                         {
                             string contenidoCeldaB = row[1]?.ToString();
+                            if (string.IsNullOrWhiteSpace(contenidoCeldaB)) return new List<string>();
 
-                            if (string.IsNullOrWhiteSpace(contenidoCeldaB))
-                                return new List<string>();
-
-                            // Separar por saltos de lÌnea y limpiar espacios
                             return contenidoCeldaB
                                 .Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
                                 .Select(c => c.Trim())
@@ -95,13 +102,11 @@ namespace CopiarParametrosRevit2021.Helpers
                         }
                     }
                 }
-
-                // Si no se encuentra la clave "CATEGORIAS"
                 return new List<string>();
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error leyendo Google Sheets: {ex.Message}");
+                throw new Exception($"Error obteniendo categor√≠as: {ex.Message}");
             }
         }
     }
