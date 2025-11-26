@@ -125,12 +125,12 @@
     <Compile Include="Commands\LookaheadManagement\Models\ScheduleData.cs" />
     <Compile Include="Commands\LookaheadManagement\Models\ScheduleGroup.cs" />
     <Compile Include="Commands\LookaheadManagement\Services\StringUtils.cs" />
-    <Compile Include="Commands\LookaheadManagement\Services\GoogleSheetsService.cs" />
     <Compile Include="Commands\LookaheadManagement\Services\ConfigReader.cs" />
     <Compile Include="Commands\LookaheadManagement\Services\ElementCollectorService.cs" />
     <Compile Include="Commands\LookaheadManagement\Services\ParameterService.cs" />
     <Compile Include="Commands\LookaheadManagement\Services\FilterService.cs" />
     <Compile Include="Commands\LookaheadManagement\Services\LookAheadProcessor.cs" />
+    <Compile Include="Helpers\GoogleSheetsService.cs" />
     <!-- UI -->
     <Compile Include="UI\VentanaDetalle.cs" />
     <Compile Include="UI\VentanaLeyenda.cs" />

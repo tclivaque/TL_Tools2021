@@ -1,41 +1,32 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System;
+// CORRECCIÓN: Importar el namespace donde vive EjecutarOverrideCommand
+using CopiarParametrosRevit2021.Commands.ParameterReview;
 
 public class OverrideCommandEventHandler : IExternalEventHandler
 {
+    // Bandera para saber qué botón se presionó (Color o Reset)
+    public bool EsReset { get; set; } = false;
+
     public void Execute(UIApplication app)
     {
         try
         {
-            // Ejecutar el comando de override
-            var comando = new EjecutarOverrideCommand();
-
-            UIDocument uidoc = app.ActiveUIDocument;
-            if (uidoc == null)
-                return;
-
-            string mensaje = "";
-            ElementSet elementos = new ElementSet();
-
-            // Crear un wrapper para ExternalCommandData
-            // Como no podemos crear ExternalCommandData directamente,
-            // accedemos a lo que necesitamos (UIApplication) que ya tenemos
-
-            // Ejecutar la lógica del comando directamente
-            Document doc = uidoc.Document;
-            View vistaActiva = doc.ActiveView;
-
-            // Llamar al método público Execute del comando
-            // Nota: esto requiere que el comando maneje internamente la falta de ExternalCommandData
-            // Por ahora, usaremos reflexión o crearemos un método helper
-
-            // Alternativa: crear método estático en EjecutarOverrideCommand
-            EjecutarOverrideCommand.ExecuteFromEvent(app);
+            if (EsReset)
+            {
+                // Ejecutar lógica de Reset (Requiere actualización en ResetOverridesCommand)
+                ResetOverridesCommand.ExecuteLogic(app);
+            }
+            else
+            {
+                // Ejecutar lógica de Colorear (Con Debug)
+                EjecutarOverrideCommand.ExecuteFromEvent(app);
+            }
         }
         catch (Exception ex)
         {
-            TaskDialog.Show("Error", $"Error al ejecutar override: {ex.Message}");
+            TaskDialog.Show("Error", $"Error en el evento: {ex.Message}");
         }
     }
 

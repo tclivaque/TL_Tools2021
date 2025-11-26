@@ -3,6 +3,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System;
 using System.Linq;
+using CopiarParametrosRevit2021.Helpers;
 using TL_Tools2021.Commands.LookaheadManagement.Services;
 
 namespace TL_Tools2021.Commands.LookaheadManagement
@@ -36,7 +37,6 @@ namespace TL_Tools2021.Commands.LookaheadManagement
 
             try
             {
-                // ============ PASO 1: ASIGNAR LOOK AHEAD ============
                 Result asignacionResult = EjecutarAsignacion(doc, out string asignacionMsg);
 
                 if (asignacionResult == Result.Failed)
@@ -45,10 +45,7 @@ namespace TL_Tools2021.Commands.LookaheadManagement
                     return Result.Failed;
                 }
 
-                // ============ PASO 2: ACTUALIZAR MEMBRETE ============
                 Result membreteResult = EjecutarMembrete(doc, out string membreteMsg);
-
-                // Continuar aunque falle el membrete (la asignación ya fue exitosa)
                 return Result.Succeeded;
             }
             catch (Exception ex)
@@ -62,16 +59,14 @@ namespace TL_Tools2021.Commands.LookaheadManagement
         {
             try
             {
-                // 1. Obtener Identidad del Modelo (Activo ID)
                 string docTitle = doc.Title;
                 string activeId = "";
 
-                if (docTitle.Length >= 23)
-                {
-                    activeId = docTitle.Substring(20, 3);
-                }
+                if (docTitle.Length >= 26) activeId = docTitle.Substring(20, 6);
+                else if (docTitle.Length >= 23) activeId = docTitle.Substring(20, 3);
 
-                // 2. Conexión y Lectura
+                activeId = activeId.Replace("-", "").Trim();
+
                 var sheetsService = new GoogleSheetsService();
                 var configReader = new ConfigReader(
                     sheetsService,
@@ -89,16 +84,12 @@ namespace TL_Tools2021.Commands.LookaheadManagement
 
                 var scheduleData = configReader.ReadScheduleData(configRules, activeId);
 
-                // DEBUG: Guardar log de ConfigReader
-                configReader.SaveDebugLog();
-
                 if (scheduleData == null || !scheduleData.Any())
                 {
                     resultMessage = $"No se encontraron datos para el activo '{activeId}' en la hoja LOOKAHEAD.";
                     return Result.Failed;
                 }
 
-                // 3. Preparación
                 string discipline = GetDisciplineFromTitle(docTitle);
                 var relevantRules = configRules
                     .Where(r => r.Disciplines.Contains(discipline, StringComparer.OrdinalIgnoreCase))
@@ -122,11 +113,9 @@ namespace TL_Tools2021.Commands.LookaheadManagement
 
                 var processor = new LookAheadProcessor(paramService, filterService, elementCache);
 
-                // 4. Ejecución
                 using (TransactionGroup tg = new TransactionGroup(doc, "Asignar Look Ahead"))
                 {
                     tg.Start();
-
                     using (Transaction trans = new Transaction(doc, "Modificar Parámetros"))
                     {
                         trans.Start();
@@ -134,19 +123,15 @@ namespace TL_Tools2021.Commands.LookaheadManagement
                         processor.ApplyExecuteAndSALogic(relevantRules);
                         trans.Commit();
                     }
-
                     tg.Assimilate();
                 }
-
-                // DEBUG: Guardar log en escritorio
-                processor.SaveDebugLog();
 
                 resultMessage = "Look Ahead asignado correctamente.";
                 return Result.Succeeded;
             }
             catch (Exception ex)
             {
-                resultMessage = ex.Message;
+                resultMessage = $"Error en asignación: {ex.Message}";
                 return Result.Failed;
             }
         }
@@ -155,14 +140,8 @@ namespace TL_Tools2021.Commands.LookaheadManagement
         {
             try
             {
-                var membreteCommand = new MembreteLookaheadCommand();
                 string msg = "";
-                ElementSet elems = new ElementSet();
-
-                // Crear un ExternalCommandData simulado
-                // Como no podemos crear uno real fácilmente, ejecutaremos la lógica directamente
                 Result result = ActualizarMembreteDirecto(doc, out msg);
-
                 resultMessage = msg;
                 return result;
             }
@@ -177,7 +156,6 @@ namespace TL_Tools2021.Commands.LookaheadManagement
         {
             try
             {
-                // Obtener información del archivo
                 string fileName = doc.Title;
                 if (System.IO.Path.HasExtension(fileName))
                     fileName = System.IO.Path.GetFileNameWithoutExtension(fileName);
@@ -201,14 +179,12 @@ namespace TL_Tools2021.Commands.LookaheadManagement
                 else
                     codigoActivo = rawSector.Length >= 3 ? rawSector.Substring(rawSector.Length - 3) : rawSector;
 
-                // Calcular fechas
                 DateTime hoy = DateTime.Today;
                 int diasParaLunes = ((int)DayOfWeek.Monday - (int)hoy.DayOfWeek + 7) % 7;
                 DateTime fechaEntrega = hoy.AddDays(diasParaLunes);
                 DateTime inicioSemanas = new DateTime(2024, 12, 9);
                 int semanaEntrega = (int)((fechaEntrega - inicioSemanas).TotalDays / 7) + 1;
 
-                // Buscar plano
                 ViewSheet targetSheet = new FilteredElementCollector(doc)
                     .OfClass(typeof(ViewSheet))
                     .Cast<ViewSheet>()
@@ -232,7 +208,6 @@ namespace TL_Tools2021.Commands.LookaheadManagement
                     return Result.Failed;
                 }
 
-                // Actualizar
                 using (Transaction t = new Transaction(doc, "Actualizar Membrete LookAhead"))
                 {
                     t.Start();
@@ -283,12 +258,9 @@ namespace TL_Tools2021.Commands.LookaheadManagement
             Parameter param = element.LookupParameter(paramName);
             if (param != null && !param.IsReadOnly)
             {
-                if (value is string s)
-                    param.Set(s);
-                else if (value is int i)
-                    param.Set(i);
-                else if (value is double d)
-                    param.Set(d);
+                if (value is string s) param.Set(s);
+                else if (value is int i) param.Set(i);
+                else if (value is double d) param.Set(d);
             }
         }
 
@@ -307,19 +279,13 @@ namespace TL_Tools2021.Commands.LookaheadManagement
 
         private string GetDisciplineFromTitle(string title)
         {
-            if (string.IsNullOrEmpty(title) || title.Length < 18)
-                return "AR";
-
+            if (string.IsNullOrEmpty(title) || title.Length < 18) return "AR";
             try
             {
                 string discipline = title.Substring(16, 2).ToUpper();
-                return (discipline == "ES" || discipline == "SA" ||
-                        discipline == "DT" || discipline == "EE") ? discipline : "AR";
+                return (discipline == "ES" || discipline == "SA" || discipline == "DT" || discipline == "EE") ? discipline : "AR";
             }
-            catch
-            {
-                return "AR";
-            }
+            catch { return "AR"; }
         }
     }
 }
