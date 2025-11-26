@@ -2,74 +2,290 @@ using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System;
-using CopiarParametrosRevit2021.Helpers; // Servicio unificado
+using System.Linq;
+using CopiarParametrosRevit2021.Helpers;
 using TL_Tools2021.Commands.LookaheadManagement.Services;
 
 namespace TL_Tools2021.Commands.LookaheadManagement
 {
     [Transaction(TransactionMode.Manual)]
+    [Regeneration(RegenerationOption.Manual)]
     public class ProcesarLookaheadCommand : IExternalCommand
     {
-        // --- CONFIGURACIÓN ---
-        private const string SPREADSHEET_ID = "14bYBONt68lfM-sx6iIJxkYExXS0u7sdgijEScL3Ed3Y";
-        private const string SCHEDULE_SHEET = "LOOKAHEAD";
-        private const string CONFIG_SHEET = "ENTRADAS_SCRIPT_2.0 LOOKAHEAD";
+        // === CONFIGURACIÓN ===
+        private const string SPREADSHEET_ID = "1DPSRZDrqZkCxaHQrIIaz5NSf5m3tLJcggvAx9k8x9SA";
+        private const string SCHEDULE_SHEET_NAME = "LOOKAHEAD";
+        private const string CONFIG_SHEET_NAME = "CONFIG_ACTIVIDADES";
 
-        // EL ID ÚNICO PARA DEBUG
-        private const string ACTIVE_ID = "282354";
+        // === CONSTANTES ===
+        private const double ANCHO_14_METROS = 0.14;
+        private const double ANCHO_19_METROS = 0.19;
+        private const double TOLERANCIA_METROS = 0.01;
+
+        private static readonly double ANCHO_14_PIES = UnitUtils.Convert(
+            ANCHO_14_METROS, UnitTypeId.Meters, UnitTypeId.Feet);
+        private static readonly double ANCHO_19_PIES = UnitUtils.Convert(
+            ANCHO_19_METROS, UnitTypeId.Meters, UnitTypeId.Feet);
+        private static readonly double TOLERANCIA_PIES = UnitUtils.Convert(
+            TOLERANCIA_METROS, UnitTypeId.Meters, UnitTypeId.Feet);
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            // Instanciar servicios
-            var sheetsService = new GoogleSheetsService();
-            var configReader = new ConfigReader(sheetsService, SPREADSHEET_ID, SCHEDULE_SHEET, CONFIG_SHEET);
+            UIApplication uiapp = commandData.Application;
+            UIDocument uidoc = uiapp.ActiveUIDocument;
+            Document doc = uidoc.Document;
 
             try
             {
-                // INICIAR LOG DE DEBUG
-                configReader.InitializeDebug(ACTIVE_ID);
-                configReader.Log("Iniciando comando desde Revit...");
+                Result asignacionResult = EjecutarAsignacion(doc, out string asignacionMsg);
 
-                // 1. Leer Reglas
-                var rules = configReader.ReadConfigRules();
-                if (rules.Count == 0)
+                if (asignacionResult == Result.Failed)
                 {
-                    TaskDialog.Show("Error", "No se leyeron reglas. Revisa el Log en el Escritorio.");
+                    message = asignacionMsg;
                     return Result.Failed;
                 }
 
-                // 2. Leer Datos filtrando por ACTIVE_ID
-                var scheduleData = configReader.ReadScheduleData(rules, ACTIVE_ID);
-
-                if (scheduleData.Count == 0)
-                {
-                    configReader.Log("RESULTADO: 0 elementos encontrados.");
-                    TaskDialog.Show("Aviso", $"No se encontraron actividades para el ID {ACTIVE_ID}.\nRevisa el archivo 'Lookahead_Debug_{ACTIVE_ID}.txt' en tu escritorio para ver el detalle.");
-                    return Result.Succeeded;
-                }
-
-                // 3. (Aquí iría el procesamiento real en Revit con LookAheadProcessor)
-                // var processor = new LookAheadProcessor(commandData.Application.ActiveUIDocument.Document);
-                // processor.Process(scheduleData);
-
-                configReader.Log($"Proceso completado. {scheduleData.Count} actividades listas para procesar.");
-
-                TaskDialog.Show("Éxito", $"Proceso finalizado.\nActividades encontradas: {scheduleData.Count}\n\nLog generado en Escritorio: Lookahead_Debug_{ACTIVE_ID}.txt");
-
+                Result membreteResult = EjecutarMembrete(doc, out string membreteMsg);
                 return Result.Succeeded;
             }
             catch (Exception ex)
             {
-                configReader.Log($"\n[EXCEPCIÓN]: {ex.Message}");
-                configReader.Log(ex.StackTrace);
-                message = $"Error crítico: {ex.Message}";
+                message = ex.Message;
                 return Result.Failed;
             }
-            finally
+        }
+
+        private Result EjecutarAsignacion(Document doc, out string resultMessage)
+        {
+            try
             {
-                // SIEMPRE GUARDAR EL LOG
-                configReader.SaveDebugLog();
+                string docTitle = doc.Title;
+                string activeId = "";
+
+                if (docTitle.Length >= 26) activeId = docTitle.Substring(20, 6);
+                else if (docTitle.Length >= 23) activeId = docTitle.Substring(20, 3);
+
+                activeId = activeId.Replace("-", "").Trim();
+
+                var sheetsService = new GoogleSheetsService();
+                var configReader = new ConfigReader(
+                    sheetsService,
+                    SPREADSHEET_ID,
+                    SCHEDULE_SHEET_NAME,
+                    CONFIG_SHEET_NAME);
+
+                var configRules = configReader.ReadConfigRules();
+
+                if (configRules == null || !configRules.Any())
+                {
+                    resultMessage = "No se encontraron reglas en CONFIG_ACTIVIDADES.";
+                    return Result.Failed;
+                }
+
+                var scheduleData = configReader.ReadScheduleData(configRules, activeId);
+
+                if (scheduleData == null || !scheduleData.Any())
+                {
+                    resultMessage = $"No se encontraron datos para el activo '{activeId}' en la hoja LOOKAHEAD.";
+                    return Result.Failed;
+                }
+
+                string discipline = GetDisciplineFromTitle(docTitle);
+                var relevantRules = configRules
+                    .Where(r => r.Disciplines.Contains(discipline, StringComparer.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (!relevantRules.Any())
+                {
+                    resultMessage = $"No hay reglas configuradas para la disciplina '{discipline}'.";
+                    return Result.Failed;
+                }
+
+                var collector = new ElementCollectorService(doc);
+                var elementCache = collector.CollectElements(relevantRules);
+
+                var paramService = new ParameterService(doc);
+                var filterService = new FilterService(
+                    paramService,
+                    ANCHO_14_PIES,
+                    ANCHO_19_PIES,
+                    TOLERANCIA_PIES);
+
+                var processor = new LookAheadProcessor(paramService, filterService, elementCache);
+
+                using (TransactionGroup tg = new TransactionGroup(doc, "Asignar Look Ahead"))
+                {
+                    tg.Start();
+                    using (Transaction trans = new Transaction(doc, "Modificar Parámetros"))
+                    {
+                        trans.Start();
+                        processor.AssignWeeks(scheduleData, discipline);
+                        processor.ApplyExecuteAndSALogic(relevantRules);
+                        trans.Commit();
+                    }
+                    tg.Assimilate();
+                }
+
+                resultMessage = "Look Ahead asignado correctamente.";
+                return Result.Succeeded;
             }
+            catch (Exception ex)
+            {
+                resultMessage = $"Error en asignación: {ex.Message}";
+                return Result.Failed;
+            }
+        }
+
+        private Result EjecutarMembrete(Document doc, out string resultMessage)
+        {
+            try
+            {
+                string msg = "";
+                Result result = ActualizarMembreteDirecto(doc, out msg);
+                resultMessage = msg;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                resultMessage = ex.Message;
+                return Result.Failed;
+            }
+        }
+
+        private Result ActualizarMembreteDirecto(Document doc, out string message)
+        {
+            try
+            {
+                string fileName = doc.Title;
+                if (System.IO.Path.HasExtension(fileName))
+                    fileName = System.IO.Path.GetFileNameWithoutExtension(fileName);
+
+                string[] parts = fileName.Split('-');
+
+                if (parts.Length < 5)
+                {
+                    message = "El nombre del archivo no tiene el formato esperado.";
+                    return Result.Failed;
+                }
+
+                string especialidad = parts[3];
+                string rawSector = parts[4];
+                string codigoActivo = "";
+
+                if (rawSector.StartsWith("000") && rawSector.Length >= 6)
+                    codigoActivo = rawSector.Substring(3, 3);
+                else if (rawSector.StartsWith("0") && rawSector.Length >= 4)
+                    codigoActivo = rawSector.Substring(1, 3);
+                else
+                    codigoActivo = rawSector.Length >= 3 ? rawSector.Substring(rawSector.Length - 3) : rawSector;
+
+                DateTime hoy = DateTime.Today;
+                int diasParaLunes = ((int)DayOfWeek.Monday - (int)hoy.DayOfWeek + 7) % 7;
+                DateTime fechaEntrega = hoy.AddDays(diasParaLunes);
+                DateTime inicioSemanas = new DateTime(2024, 12, 9);
+                int semanaEntrega = (int)((fechaEntrega - inicioSemanas).TotalDays / 7) + 1;
+
+                ViewSheet targetSheet = new FilteredElementCollector(doc)
+                    .OfClass(typeof(ViewSheet))
+                    .Cast<ViewSheet>()
+                    .FirstOrDefault(s => s.SheetNumber.Contains("-LPS-S"));
+
+                if (targetSheet == null)
+                {
+                    message = "No se encontró ningún plano que contenga '-LPS-S' en su número.";
+                    return Result.Failed;
+                }
+
+                FamilyInstance titleblock = new FilteredElementCollector(doc, targetSheet.Id)
+                    .OfCategory(BuiltInCategory.OST_TitleBlocks)
+                    .WhereElementIsNotElementType()
+                    .Cast<FamilyInstance>()
+                    .FirstOrDefault();
+
+                if (titleblock == null)
+                {
+                    message = $"El plano {targetSheet.SheetNumber} no tiene un membrete colocado.";
+                    return Result.Failed;
+                }
+
+                using (Transaction t = new Transaction(doc, "Actualizar Membrete LookAhead"))
+                {
+                    t.Start();
+
+                    targetSheet.Name = $"PLANO DE LOOK AHEAD PLANNING - SEMANA {semanaEntrega}";
+                    string newSheetNumber = $"200114-CCC02-PL-{especialidad}-{codigoActivo}-LPS-S{semanaEntrega}";
+
+                    if (!targetSheet.SheetNumber.Equals(newSheetNumber))
+                    {
+                        try { targetSheet.SheetNumber = newSheetNumber; } catch { }
+                    }
+
+                    Parameter dateParam = targetSheet.get_Parameter(BuiltInParameter.SHEET_ISSUE_DATE);
+                    if (dateParam != null)
+                        dateParam.Set(fechaEntrega.ToString("dd/MM/yyyy"));
+
+                    SetParameter(titleblock, "NOMBRE DEL PROYECTO", "I.E. FRANCISCO BOLOGNESI CERVANTES");
+                    SetParameter(titleblock, "DISCIPLINA", GetDisciplinaName(especialidad));
+                    SetParameter(titleblock, "ESCALA", "INDICADA");
+                    SetParameter(titleblock, "RV", "C0");
+                    SetParameter(titleblock, "ESCALA GRAFICA", 0);
+                    SetParameter(titleblock, "NORTE REFERENTE", 0);
+                    SetParameter(titleblock, "EMITIDO PARA CONSTRUCCIÓN", 0);
+
+                    foreach (Parameter param in titleblock.Parameters)
+                    {
+                        if (param.Definition.Name.StartsWith("ACTIVO "))
+                        {
+                            param.Set(param.Definition.Name.Contains(codigoActivo) ? 1 : 0);
+                        }
+                    }
+
+                    t.Commit();
+                }
+
+                message = $"Plano: {targetSheet.SheetNumber}\nSemana: {semanaEntrega}";
+                return Result.Succeeded;
+            }
+            catch (Exception ex)
+            {
+                message = ex.Message;
+                return Result.Failed;
+            }
+        }
+
+        private void SetParameter(Element element, string paramName, object value)
+        {
+            Parameter param = element.LookupParameter(paramName);
+            if (param != null && !param.IsReadOnly)
+            {
+                if (value is string s) param.Set(s);
+                else if (value is int i) param.Set(i);
+                else if (value is double d) param.Set(d);
+            }
+        }
+
+        private string GetDisciplinaName(string sigla)
+        {
+            switch (sigla.ToUpper())
+            {
+                case "AR": return "ARQUITECTURA";
+                case "EE": return "INSTALACIONES ELÉCTRICAS";
+                case "ES": return "ESTRUCTURAS";
+                case "SA": return "INSTALACIONES SANITARIAS";
+                case "ME": return "INSTALACIONES MECÁNICAS";
+                default: return "ARQUITECTURA";
+            }
+        }
+
+        private string GetDisciplineFromTitle(string title)
+        {
+            if (string.IsNullOrEmpty(title) || title.Length < 18) return "AR";
+            try
+            {
+                string discipline = title.Substring(16, 2).ToUpper();
+                return (discipline == "ES" || discipline == "SA" || discipline == "DT" || discipline == "EE") ? discipline : "AR";
+            }
+            catch { return "AR"; }
         }
     }
 }
