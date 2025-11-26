@@ -8,17 +8,7 @@ public class ResetOverridesCommand : IExternalCommand
 {
     public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
     {
-        // El comando normal redirige a la lógica compartida
-        ExecuteLogic(commandData.Application);
-        return Result.Succeeded;
-    }
-
-    // Método estático para ser usado por la Ventana (EventHandler)
-    public static void ExecuteLogic(UIApplication uiApp)
-    {
-        UIDocument uidoc = uiApp.ActiveUIDocument;
-        if (uidoc == null) return;
-
+        UIDocument uidoc = commandData.Application.ActiveUIDocument;
         Document doc = uidoc.Document;
         View vistaActiva = doc.ActiveView;
 
@@ -39,24 +29,23 @@ public class ResetOverridesCommand : IExternalCommand
                 {
                     try
                     {
-                        // Verificar si el elemento tiene geometría/categoría válida antes de limpiar
-                        if (elem.Category != null)
-                        {
-                            vistaActiva.SetElementOverrides(elem.Id, overridePorDefecto);
-                        }
+                        vistaActiva.SetElementOverrides(elem.Id, overridePorDefecto);
                     }
                     catch
                     {
-                        // Ignorar elementos que no soportan overrides
+                        // Continuar con el siguiente elemento si hay error
                     }
                 }
 
                 trans.Commit();
             }
+
+            return Result.Succeeded;
         }
         catch (Exception ex)
         {
-            TaskDialog.Show("Error Reset", $"Error al restablecer colores: {ex.Message}");
+            message = $"Error: {ex.Message}";
+            return Result.Failed;
         }
     }
 }

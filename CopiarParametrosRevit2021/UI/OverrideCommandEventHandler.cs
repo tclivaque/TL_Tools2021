@@ -1,32 +1,26 @@
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System;
-// CORRECCIÓN: Importar el namespace donde vive EjecutarOverrideCommand
-using CopiarParametrosRevit2021.Commands.ParameterReview;
 
 public class OverrideCommandEventHandler : IExternalEventHandler
 {
-    // Bandera para saber qué botón se presionó (Color o Reset)
-    public bool EsReset { get; set; } = false;
-
     public void Execute(UIApplication app)
     {
         try
         {
-            if (EsReset)
-            {
-                // Ejecutar lógica de Reset (Requiere actualización en ResetOverridesCommand)
-                ResetOverridesCommand.ExecuteLogic(app);
-            }
-            else
-            {
-                // Ejecutar lógica de Colorear (Con Debug)
-                EjecutarOverrideCommand.ExecuteFromEvent(app);
-            }
+            // Ejecutar el comando de override
+            var comando = new EjecutarOverrideCommand();
+
+            UIDocument uidoc = app.ActiveUIDocument;
+            if (uidoc == null)
+                return;
+
+            // Ejecutar la lógica estática del comando
+            EjecutarOverrideCommand.ExecuteFromEvent(app);
         }
         catch (Exception ex)
         {
-            TaskDialog.Show("Error", $"Error en el evento: {ex.Message}");
+            TaskDialog.Show("Error", $"Error al ejecutar override: {ex.Message}");
         }
     }
 
