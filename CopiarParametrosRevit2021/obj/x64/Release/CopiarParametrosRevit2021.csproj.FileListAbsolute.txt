@@ -22,4 +22,3 @@ C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\b
 C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\bin\x64\Release\Google.Apis.dll
 C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\bin\x64\Release\Google.Apis.PlatformServices.dll
 C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\bin\x64\Release\Google.Apis.Sheets.v4.dll
-C:\Users\User\source\repos\CopiarParametrosRevit2021\CopiarParametrosRevit2021\bin\x64\Release\Newtonsoft.Json.dll
