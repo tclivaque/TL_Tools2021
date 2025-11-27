@@ -60,32 +60,14 @@ public class EjecutarOverrideCommand : IExternalCommand
 
     private static void ExecuteLogic(UIApplication uiApp, Document doc, View vistaActiva)
     {
-        // Variables para debug
-        string debugFilePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-            $"AplicarColores_Debug_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
-        List<string> debugLog = new List<string>();
-
-        debugLog.Add("==================================================");
-        debugLog.Add($"DEBUG APLICAR COLORES - {DateTime.Now:dd/MM/yyyy HH:mm:ss}");
-        debugLog.Add($"Spreadsheet: {SPREADSHEET_ID}");
-        debugLog.Add($"Hoja: {SHEET_NAME}");
-        debugLog.Add($"Vista: {vistaActiva.Name}");
-        debugLog.Add("==================================================");
-        debugLog.Add("");
-
         // 1. Leer parámetro configurado
-        debugLog.Add("[PASO 1] LEYENDO PARÁMETRO CONFIGURADO...");
         string nombreParametro = LeerParametroGuardado();
         if (string.IsNullOrWhiteSpace(nombreParametro))
         {
             throw new Exception("No se encontró un parámetro configurado.");
         }
-        debugLog.Add($"-> Parámetro configurado: '{nombreParametro}'");
-        debugLog.Add("");
 
         // 2. Obtener lista blanca de categorías desde Google Sheets
-        debugLog.Add("[PASO 2] CONECTANDO A GOOGLE SHEETS...");
         List<string> categoriasMetradas = new List<string>();
         try
         {
@@ -96,28 +78,15 @@ public class EjecutarOverrideCommand : IExternalCommand
         }
         catch (Exception ex)
         {
-            debugLog.Add($"-> ERROR: {ex.Message}");
-            File.WriteAllLines(debugFilePath, debugLog);
             throw new Exception($"Error conectando con Google Sheets: {ex.Message}");
         }
 
         if (categoriasMetradas.Count == 0)
         {
-            debugLog.Add("-> ERROR: No se encontraron categorías");
-            File.WriteAllLines(debugFilePath, debugLog);
             throw new Exception($"No se encontraron categorías en la hoja '{SHEET_NAME}' bajo la clave 'CATEGORIAS'.");
         }
 
-        debugLog.Add($"-> Conexión exitosa. Categorías leídas: {categoriasMetradas.Count}");
-        debugLog.Add("-> Categorías metradas:");
-        foreach (var cat in categoriasMetradas.OrderBy(c => c))
-        {
-            debugLog.Add($"  - {cat}");
-        }
-        debugLog.Add("");
-
         // 3. Recolectar elementos
-        debugLog.Add("[PASO 3] RECOLECTANDO ELEMENTOS DE LA VISTA...");
         FilteredElementCollector collector = new FilteredElementCollector(doc, vistaActiva.Id)
             .WhereElementIsNotElementType();
 
@@ -127,8 +96,6 @@ public class EjecutarOverrideCommand : IExternalCommand
         Dictionary<string, Color> coloresPorValor = new Dictionary<string, Color>();
 
         // 4. Clasificación de elementos
-        debugLog.Add("[PASO 4] CLASIFICANDO ELEMENTOS...");
-        int elementosProcesados = 0;
         foreach (Element elem in collector)
         {
             if (elem.Category == null) continue;
@@ -139,29 +106,11 @@ public class EjecutarOverrideCommand : IExternalCommand
 
             if (elem.IsHidden(vistaActiva)) continue;
 
-            elementosProcesados++;
-
-            // FIX: Obtener el BuiltInCategory para comparar con Google Sheets
             string catBuiltIn = ((BuiltInCategory)elem.Category.Id.IntegerValue).ToString().ToUpper();
             bool esCategoriaMetrada = categoriasMetradas.Contains(catBuiltIn);
 
-            // Debug detallado para los primeros 5 elementos
-            if (elementosProcesados <= 5)
-            {
-                debugLog.Add("");
-                debugLog.Add($"ELEMENTO {elem.Id.IntegerValue}:");
-                debugLog.Add($"  -> Nombre: {(elem as FamilyInstance)?.Name ?? elem.Name}");
-                debugLog.Add($"  -> Categoría (nombre): {catName}");
-                debugLog.Add($"  -> Categoría (BuiltIn): {catBuiltIn}");
-                debugLog.Add($"  -> ¿Está en lista de categorías metradas? {esCategoriaMetrada}");
-            }
-
             if (!esCategoriaMetrada)
             {
-                if (elementosProcesados <= 5)
-                {
-                    debugLog.Add($"  -> [CLASIFICADO] GRUPO C - No metrada (se pintará NEGRO)");
-                }
                 elementosNoMetrados.Add(elem.Id);
                 continue;
             }
@@ -170,11 +119,6 @@ public class EjecutarOverrideCommand : IExternalCommand
 
             if (!string.IsNullOrWhiteSpace(valorParametro))
             {
-                if (elementosProcesados <= 5)
-                {
-                    debugLog.Add($"  -> Valor del parámetro '{nombreParametro}': {valorParametro}");
-                    debugLog.Add($"  -> [CLASIFICADO] GRUPO A - Con valor (se pintará COLOR)");
-                }
                 if (!elementosPorValor.ContainsKey(valorParametro))
                 {
                     elementosPorValor[valorParametro] = new List<ElementId>();
@@ -183,34 +127,17 @@ public class EjecutarOverrideCommand : IExternalCommand
             }
             else
             {
-                if (elementosProcesados <= 5)
-                {
-                    debugLog.Add($"  -> Valor del parámetro '{nombreParametro}': (vacío)");
-                    debugLog.Add($"  -> [CLASIFICADO] GRUPO B - Sin valor (se pintará ROJO)");
-                }
                 elementosSinValor.Add(elem.Id);
             }
         }
 
-        debugLog.Add("");
-        debugLog.Add($"-> Total elementos procesados: {elementosProcesados}");
-        debugLog.Add($"-> GRUPO A (con valor): {elementosPorValor.Sum(kvp => kvp.Value.Count)} elementos");
-        debugLog.Add($"-> GRUPO B (sin valor): {elementosSinValor.Count} elementos");
-        debugLog.Add($"-> GRUPO C (no metrada): {elementosNoMetrados.Count} elementos");
-        debugLog.Add("");
-
         // 5. Aplicar Overrides
-        debugLog.Add("[PASO 5] APLICANDO COLORES...");
         using (Transaction trans = new Transaction(doc, "Aplicar Colores Auditoría"))
         {
             trans.Start();
 
             // A) GRUPO A (Valores encontrados)
             var valoresOrdenados = elementosPorValor.Keys.OrderBy(v => v).ToList();
-            if (valoresOrdenados.Count > 0)
-            {
-                debugLog.Add($"-> Aplicando colores a GRUPO A (con valores): {valoresOrdenados.Count} valores únicos");
-            }
             for (int i = 0; i < valoresOrdenados.Count; i++)
             {
                 string valor = valoresOrdenados[i];
@@ -219,17 +146,11 @@ public class EjecutarOverrideCommand : IExternalCommand
 
                 coloresPorValor[valor] = color;
                 AplicarOverrideColor(vistaActiva, ids, color, doc);
-
-                if (i < 5) // Log de los primeros 5 valores
-                {
-                    debugLog.Add($"   {i + 1}. Valor '{valor}': {ids.Count} elementos -> RGB({color.Red},{color.Green},{color.Blue})");
-                }
             }
 
             // B) GRUPO B (Sin valor -> Rojo)
             if (elementosSinValor.Count > 0)
             {
-                debugLog.Add($"-> Aplicando ROJO a GRUPO B (sin valor): {elementosSinValor.Count} elementos");
                 Color colorRojo = new Color(255, 0, 0);
                 AplicarOverrideColor(vistaActiva, elementosSinValor, colorRojo, doc);
             }
@@ -237,7 +158,6 @@ public class EjecutarOverrideCommand : IExternalCommand
             // C) GRUPO C (No metrada -> Negro)
             if (elementosNoMetrados.Count > 0)
             {
-                debugLog.Add($"-> Aplicando NEGRO a GRUPO C (no metrada): {elementosNoMetrados.Count} elementos");
                 Color colorNegro = new Color(0, 0, 0);
                 AplicarOverrideColor(vistaActiva, elementosNoMetrados, colorNegro, doc);
 
@@ -247,21 +167,6 @@ public class EjecutarOverrideCommand : IExternalCommand
             }
 
             trans.Commit();
-            debugLog.Add("-> Transacción completada exitosamente.");
-        }
-
-        debugLog.Add("[PROCESO COMPLETADO]");
-        debugLog.Add($"Archivo de debug guardado en: {debugFilePath}");
-        debugLog.Add("");
-
-        // Guardar archivo de debug
-        try
-        {
-            File.WriteAllLines(debugFilePath, debugLog);
-        }
-        catch (Exception ex)
-        {
-            TaskDialog.Show("Error al guardar debug", $"No se pudo guardar el archivo de debug: {ex.Message}");
         }
 
         // 6. Mostrar Leyenda

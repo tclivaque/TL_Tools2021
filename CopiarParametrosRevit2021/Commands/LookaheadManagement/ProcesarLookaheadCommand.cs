@@ -14,27 +14,20 @@ namespace TL_Tools2021.Commands.LookaheadManagement
         private const string SPREADSHEET_ID = "14bYBONt68lfM-sx6iIJxkYExXS0u7sdgijEScL3Ed3Y";
         private const string SCHEDULE_SHEET = "LOOKAHEAD";
         private const string CONFIG_SHEET = "ENTRADAS_SCRIPT_2.0 LOOKAHEAD";
-
-        // EL ID ÚNICO PARA DEBUG
         private const string ACTIVE_ID = "282354";
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            // Instanciar servicios
             var sheetsService = new GoogleSheetsService();
             var configReader = new ConfigReader(sheetsService, SPREADSHEET_ID, SCHEDULE_SHEET, CONFIG_SHEET);
 
             try
             {
-                // INICIAR LOG DE DEBUG
-                configReader.InitializeDebug(ACTIVE_ID);
-                configReader.Log("Iniciando comando desde Revit...");
-
                 // 1. Leer Reglas
                 var rules = configReader.ReadConfigRules();
                 if (rules.Count == 0)
                 {
-                    TaskDialog.Show("Error", "No se leyeron reglas. Revisa el Log en el Escritorio.");
+                    TaskDialog.Show("Error", "No se encontraron reglas de configuración.");
                     return Result.Failed;
                 }
 
@@ -43,8 +36,7 @@ namespace TL_Tools2021.Commands.LookaheadManagement
 
                 if (scheduleData.Count == 0)
                 {
-                    configReader.Log("RESULTADO: 0 elementos encontrados.");
-                    TaskDialog.Show("Aviso", $"No se encontraron actividades para el ID {ACTIVE_ID}.\nRevisa el archivo 'Lookahead_Debug_{ACTIVE_ID}.txt' en tu escritorio para ver el detalle.");
+                    TaskDialog.Show("Aviso", $"No se encontraron actividades para el ID {ACTIVE_ID}.");
                     return Result.Succeeded;
                 }
 
@@ -52,23 +44,14 @@ namespace TL_Tools2021.Commands.LookaheadManagement
                 // var processor = new LookAheadProcessor(commandData.Application.ActiveUIDocument.Document);
                 // processor.Process(scheduleData);
 
-                configReader.Log($"Proceso completado. {scheduleData.Count} actividades listas para procesar.");
-
-                TaskDialog.Show("Éxito", $"Proceso finalizado.\nActividades encontradas: {scheduleData.Count}\n\nLog generado en Escritorio: Lookahead_Debug_{ACTIVE_ID}.txt");
+                TaskDialog.Show("Éxito", $"Proceso finalizado.\nActividades encontradas: {scheduleData.Count}");
 
                 return Result.Succeeded;
             }
             catch (Exception ex)
             {
-                configReader.Log($"\n[EXCEPCIÓN]: {ex.Message}");
-                configReader.Log(ex.StackTrace);
-                message = $"Error crítico: {ex.Message}";
+                message = $"Error: {ex.Message}";
                 return Result.Failed;
-            }
-            finally
-            {
-                // SIEMPRE GUARDAR EL LOG
-                configReader.SaveDebugLog();
             }
         }
     }

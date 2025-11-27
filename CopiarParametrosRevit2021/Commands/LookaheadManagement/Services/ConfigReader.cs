@@ -17,10 +17,6 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
         private readonly string _scheduleSheetName;
         private readonly string _configSheetName;
 
-        // --- SISTEMA DE DEBUG ---
-        private readonly StringBuilder _debugLog = new StringBuilder();
-        private string _debugFilePath;
-
         public ConfigReader(GoogleSheetsService sheetsService, string spreadsheetId,
             string scheduleSheetName, string configSheetName)
         {
@@ -28,36 +24,6 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
             _spreadsheetId = spreadsheetId;
             _scheduleSheetName = scheduleSheetName;
             _configSheetName = configSheetName;
-        }
-
-        // Configura el nombre del archivo de log con el ID
-        public void InitializeDebug(string activeId)
-        {
-            _debugFilePath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-                $"Lookahead_Debug_{activeId}.txt");
-
-            _debugLog.Clear();
-            Log("==================================================");
-            Log($" INICIO DEBUG LOOKAHEAD - {DateTime.Now}");
-            Log($" ID BUSCADO: {activeId}");
-            Log($" Spreadsheet: {_spreadsheetId}");
-            Log("==================================================\n");
-        }
-
-        public void Log(string message)
-        {
-            _debugLog.AppendLine($"[{DateTime.Now:HH:mm:ss}] {message}");
-        }
-
-        public void SaveDebugLog()
-        {
-            try
-            {
-                if (!string.IsNullOrEmpty(_debugFilePath))
-                    File.WriteAllText(_debugFilePath, _debugLog.ToString());
-            }
-            catch { /* Ignorar errores de escritura de log */ }
         }
 
         private string RemoveAccents(string text)
@@ -75,13 +41,11 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
 
         public List<ActivityRule> ReadConfigRules()
         {
-            Log("[PASO 1] LEYENDO REGLAS DE CONFIGURACIÓN...");
             var rules = new List<ActivityRule>();
 
             try
             {
                 var values = _sheetsService.ReadData(_spreadsheetId, $"'{_configSheetName}'!A2:G");
-                Log($"-> Filas encontradas en config: {values.Count}");
 
                 int rowIndex = 2;
                 foreach (var row in values)
@@ -117,13 +81,12 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                             var bic = (BuiltInCategory)Enum.Parse(typeof(BuiltInCategory), c.Trim(), true);
                             rule.Categories.Add(bic);
                         }
-                        catch { Log($"   [WARN] Categoría inválida '{c}' en regla '{keyword}'"); }
+                        catch { /* Ignorar categorías inválidas */ }
                     }
 
                     if (rule.Categories.Any())
                     {
                         rules.Add(rule);
-                        Log($"   [OK] Regla cargada: '{keyword}' ({rule.Categories.Count} cats)");
                     }
 
                     rowIndex++;
@@ -131,24 +94,20 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
             }
             catch (Exception ex)
             {
-                Log($"[ERROR] Fallo leyendo reglas: {ex.Message}");
                 throw;
             }
 
-            Log($"-> Total reglas válidas: {rules.Count}\n");
             return rules;
         }
 
         public List<ScheduleData> ReadScheduleData(List<ActivityRule> rules, string activeId)
         {
-            Log("[PASO 2] LEYENDO CRONOGRAMA Y BUSCANDO MATCH...");
             var data = new List<ScheduleData>();
 
             // 1. Leer Encabezados
             var headers = _sheetsService.ReadData(_spreadsheetId, $"'{_scheduleSheetName}'!1:1");
             if (headers == null || headers.Count == 0)
             {
-                Log("[ERROR FATAL] No se leyeron encabezados.");
                 return data;
             }
 
@@ -163,21 +122,17 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                 {
                     activityColumn = i;
                     startColumn = i + 1;
-                    Log($"-> Columna Actividad: índice {i}");
-                    Log($"-> Inicio Semanas: índice {startColumn}");
                     break;
                 }
             }
 
             if (activityColumn == -1)
             {
-                Log("[ERROR FATAL] Columna 'DESCRIPCIÓN DE LA ACTIVIDAD' no encontrada.");
                 throw new Exception("Columna Actividad no encontrada");
             }
 
             // 2. Leer Datos (Hasta columna ZZ para asegurar rango)
             var rows = _sheetsService.ReadData(_spreadsheetId, $"'{_scheduleSheetName}'!A2:ZZ");
-            Log($"-> Filas de datos leídas: {rows?.Count ?? 0}");
 
             int rowIndex = 2;
             int matchesFound = 0;
@@ -259,7 +214,6 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                             }
                             else
                             {
-                                Log($"   [WARN] Fila {rowIndex}: Celda '{cellValue}' tiene ID pero formato incorrecto.");
                             }
                         }
                     }
@@ -283,9 +237,6 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                 // Solo si encontramos grupos válidos (match de ID) agregamos
                 if (groups.Any())
                 {
-                    Log($"[MATCH] Fila {rowIndex}: '{activityName}' -> Regla: '{matchingRule.ActivityKeywords}'");
-                    if (rowHasActiveId) Log($"       -> ¡ID {activeId} ENCONTRADO!");
-
                     var scheduleData = new ScheduleData
                     {
                         ActivityName = activityName,
@@ -299,7 +250,6 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                 rowIndex++;
             }
 
-            Log($"\n[FIN] Total actividades procesadas con ID {activeId}: {matchesFound}");
             return data;
         }
 
