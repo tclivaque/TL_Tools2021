@@ -21,7 +21,6 @@ public class VentanaLeyenda : Window
     private ExternalEvent _overrideExternalEvent;
     private StackPanel _panelLeyenda;
     private Button _btnMostrarTodos;
-    private Button _btnReestablecer;
     private System.Windows.Controls.Grid _menuLateral;
     private bool _menuExpanded = true;
     private string _parametroActivo = "";
@@ -70,7 +69,7 @@ public class VentanaLeyenda : Window
     {
         this.Title = "Leyenda de Colores";
         this.Width = 800;
-        this.Height = 650;
+        this.Height = 900;
         this.WindowStartupLocation = WindowStartupLocation.Manual;
         this.Left = SystemParameters.PrimaryScreenWidth - this.Width - 50;
         this.Top = 100;
@@ -102,7 +101,6 @@ public class VentanaLeyenda : Window
         gridLeyenda.Margin = new Thickness(10);
         gridLeyenda.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         gridLeyenda.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        gridLeyenda.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         System.Windows.Controls.Grid.SetColumn(gridLeyenda, 1);
 
         ScrollViewer scrollViewer = new ScrollViewer();
@@ -124,19 +122,8 @@ public class VentanaLeyenda : Window
         _btnMostrarTodos.Click += BtnMostrarTodos_Click;
         System.Windows.Controls.Grid.SetRow(_btnMostrarTodos, 1);
 
-        _btnReestablecer = new Button();
-        _btnReestablecer.Content = "Reestablecer";
-        _btnReestablecer.Height = 40;
-        _btnReestablecer.Margin = new Thickness(0, 10, 0, 0);
-        _btnReestablecer.Style = CrearEstiloBotonRedondeado();
-        _btnReestablecer.HorizontalContentAlignment = HorizontalAlignment.Center;
-        _btnReestablecer.Background = Brushes.LightGray;
-        _btnReestablecer.Click += BtnReestablecer_Click;
-        System.Windows.Controls.Grid.SetRow(_btnReestablecer, 2);
-
         gridLeyenda.Children.Add(scrollViewer);
         gridLeyenda.Children.Add(_btnMostrarTodos);
-        gridLeyenda.Children.Add(_btnReestablecer);
         gridPrincipal.Children.Add(gridLeyenda);
 
         this.Content = gridPrincipal;
@@ -564,31 +551,6 @@ public class VentanaLeyenda : Window
             _eventHandler.OcultarElementos = false;
             _eventHandler.SeleccionarElementos = false;
             _externalEvent.Raise();
-        }
-    }
-
-    private void BtnReestablecer_Click(object sender, RoutedEventArgs e)
-    {
-        if (_uiApp == null) return;
-
-        try
-        {
-            // Invocar el comando Reset usando PostCommand para ejecutar en contexto de Revit
-            RevitCommandId commandId = RevitCommandId.LookupCommandId("CustomCtrl_%CustomCtrl_%CopiarParametrosRevit2021%ResetOverridesCommand");
-
-            if (commandId != null)
-            {
-                _uiApp.PostCommand(commandId);
-            }
-            else
-            {
-                MessageBox.Show("No se pudo encontrar el comando Reset. Asegúrate de que el botón Reset esté disponible en el ribbon.",
-                               "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Error al restablecer sobrescrituras: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
