@@ -130,8 +130,7 @@ public class VentanaLeyenda : Window
         _btnReestablecer.Margin = new Thickness(0, 10, 0, 0);
         _btnReestablecer.Style = CrearEstiloBotonRedondeado();
         _btnReestablecer.HorizontalContentAlignment = HorizontalAlignment.Center;
-        _btnReestablecer.Background = new SolidColorBrush(WpfColor.FromRgb(255, 100, 100));
-        _btnReestablecer.Foreground = Brushes.White;
+        _btnReestablecer.Background = Brushes.LightGray;
         _btnReestablecer.Click += BtnReestablecer_Click;
         System.Windows.Controls.Grid.SetRow(_btnReestablecer, 2);
 
@@ -574,39 +573,18 @@ public class VentanaLeyenda : Window
 
         try
         {
-            UIDocument uidoc = _uiApp.ActiveUIDocument;
-            if (uidoc == null) return;
+            // Invocar el comando Reset usando PostCommand para ejecutar en contexto de Revit
+            RevitCommandId commandId = RevitCommandId.LookupCommandId("CustomCtrl_%CustomCtrl_%CopiarParametrosRevit2021%ResetOverridesCommand");
 
-            Document doc = uidoc.Document;
-            View vistaActiva = doc.ActiveView;
-
-            // Obtener todos los elementos visibles en la vista activa
-            FilteredElementCollector collector = new FilteredElementCollector(doc, vistaActiva.Id)
-                .WhereElementIsNotElementType();
-
-            using (Transaction trans = new Transaction(doc, "Reset Overrides Gráficos"))
+            if (commandId != null)
             {
-                trans.Start();
-
-                // Crear configuración de override vacía (restablece a por defecto)
-                OverrideGraphicSettings overridePorDefecto = new OverrideGraphicSettings();
-
-                foreach (Element elem in collector)
-                {
-                    try
-                    {
-                        vistaActiva.SetElementOverrides(elem.Id, overridePorDefecto);
-                    }
-                    catch
-                    {
-                        // Continuar con el siguiente elemento si hay error
-                    }
-                }
-
-                trans.Commit();
+                _uiApp.PostCommand(commandId);
             }
-
-            MessageBox.Show("Sobrescrituras gráficas restablecidas exitosamente.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+            else
+            {
+                MessageBox.Show("No se pudo encontrar el comando Reset. Asegúrate de que el botón Reset esté disponible en el ribbon.",
+                               "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
         catch (Exception ex)
         {
