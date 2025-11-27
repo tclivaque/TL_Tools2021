@@ -126,7 +126,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 14,
+          "SelectedChildIndex": 16,
           "Children": [
             {
               "$type": "Document",
@@ -139,8 +139,7 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABUAAABeAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-06-17T20:16:07.55Z",
-              "IsPinned": true,
-              "EditorCaption": ""
+              "IsPinned": true
             },
             {
               "$type": "Document",
@@ -203,14 +202,22 @@
               "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
             },
             {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{56df62a4-05a3-4e5b-aa1a-99371ccfb997}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{cce594b6-0c39-4442-ba28-10c64ac7e89f}"
+            },
+            {
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "MembreteLookaheadCommand.cs",
               "DocumentMoniker": "C:\\Users\\User\\source\\repos\\CopiarParametrosRevit2021\\CopiarParametrosRevit2021\\Commands\\LookaheadManagement\\MembreteLookaheadCommand.cs",
               "RelativeDocumentMoniker": "CopiarParametrosRevit2021\\Commands\\LookaheadManagement\\MembreteLookaheadCommand.cs",
-              "ToolTip": "C:\\Users\\User\\source\\repos\\CopiarParametrosRevit2021\\CopiarParametrosRevit2021\\Commands\\LookaheadManagement\\MembreteLookaheadCommand.cs*",
-              "RelativeToolTip": "CopiarParametrosRevit2021\\Commands\\LookaheadManagement\\MembreteLookaheadCommand.cs*",
-              "ViewState": "AgIAABMAAAAAAAAAAAAgwC0AAABJAAAAAAAAAA==",
+              "ToolTip": "C:\\Users\\User\\source\\repos\\CopiarParametrosRevit2021\\CopiarParametrosRevit2021\\Commands\\LookaheadManagement\\MembreteLookaheadCommand.cs",
+              "RelativeToolTip": "CopiarParametrosRevit2021\\Commands\\LookaheadManagement\\MembreteLookaheadCommand.cs",
+              "ViewState": "AgIAABMAAAAAAAAAAAAgwCMAAAARAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-26T20:11:42.166Z",
               "EditorCaption": ""
@@ -370,14 +377,6 @@
               "WhenOpened": "2025-09-11T15:54:48.791Z"
             },
             {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{56df62a4-05a3-4e5b-aa1a-99371ccfb997}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{cce594b6-0c39-4442-ba28-10c64ac7e89f}"
-            },
-            {
               "$type": "Document",
               "DocumentIndex": 5,
               "Title": "ResetOverridesCommand.cs",
@@ -387,8 +386,7 @@
               "RelativeToolTip": "CopiarParametrosRevit2021\\Commands\\ParameterReview\\ResetOverridesCommand.cs",
               "ViewState": "AgIAABoAAAAAAAAAAAAAwDIAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-26T19:50:13.973Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-26T19:50:13.973Z"
             },
             {
               "$type": "Document",
@@ -400,8 +398,7 @@
               "RelativeToolTip": "CopiarParametrosRevit2021\\Commands\\LookaheadManagement\\AsignarLookaheadCommand.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAApAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-26T18:53:26.305Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-26T18:53:26.305Z"
             },
             {
               "$type": "Document",
@@ -413,8 +410,7 @@
               "RelativeToolTip": "CopiarParametrosRevit2021\\Commands\\LookaheadManagement\\ProcesarLookaheadCommand.cs",
               "ViewState": "AgIAAEYAAAAAAAAAAAAAwEYAAAAsAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-26T18:52:25.551Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-26T18:52:25.551Z"
             },
             {
               "$type": "Document",
@@ -426,8 +422,7 @@
               "RelativeToolTip": "CopiarParametrosRevit2021\\Commands\\LookaheadManagement\\Services\\ConfigReader.cs",
               "ViewState": "AgIAAMQAAAAAAAAAAAAAwOMAAAA3AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-26T18:45:54.913Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-26T18:45:54.913Z"
             },
             {
               "$type": "Document",
@@ -439,8 +434,7 @@
               "RelativeToolTip": "CopiarParametrosRevit2021\\Commands\\ParameterReview\\EjecutarOverrideCommand.cs",
               "ViewState": "AgIAAM4AAAAAAAAAAAAkwAIBAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-26T18:40:27.069Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-26T18:40:27.069Z"
             },
             {
               "$type": "Document",
@@ -452,8 +446,7 @@
               "RelativeToolTip": "CopiarParametrosRevit2021\\UI\\OverrideCommandEventHandler.cs",
               "ViewState": "AgIAAAYAAAAAAAAAAAAxwA0AAAA0AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-26T15:35:39.286Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-26T15:35:39.286Z"
             },
             {
               "$type": "Document",
@@ -465,8 +458,7 @@
               "RelativeToolTip": "CopiarParametrosRevit2021\\Commands\\IncidentManagement\\DarFormatoCommand.cs",
               "ViewState": "AgIAADoAAAAAAAAAAAAAwFEAAAA1AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-26T18:40:40.153Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-26T18:40:40.153Z"
             },
             {
               "$type": "Document",
@@ -478,8 +470,7 @@
               "RelativeToolTip": "CopiarParametrosRevit2021\\UI\\VentanaLeyenda.cs",
               "ViewState": "AgIAAAsCAAAAAAAAAAAAwCACAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-26T15:31:50.562Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-26T15:31:50.562Z"
             },
             {
               "$type": "Document",
@@ -491,8 +482,7 @@
               "RelativeToolTip": "CopiarParametrosRevit2021\\UI\\LeyendaEventHandler.cs",
               "ViewState": "AgIAAD8AAAAAAAAAAAAAwFUAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-26T15:31:13.681Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-26T15:31:13.681Z"
             },
             {
               "$type": "Document",
@@ -504,8 +494,7 @@
               "RelativeToolTip": "CopiarParametrosRevit2021\\Commands\\LookaheadManagement\\Services\\ElementCollectorService.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-22T11:52:05.805Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-22T11:52:05.805Z"
             },
             {
               "$type": "Document",
@@ -517,8 +506,7 @@
               "RelativeToolTip": "CopiarParametrosRevit2021\\CopiarParametrosRevit2021.addin",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000072|",
-              "WhenOpened": "2025-10-01T14:51:38.151Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-01T14:51:38.151Z"
             },
             {
               "$type": "Document",
@@ -530,8 +518,7 @@
               "RelativeToolTip": "CopiarParametrosRevit2021\\CopiarParametrosRevit2021.addin",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAOAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000072|",
-              "WhenOpened": "2025-09-11T19:02:44.294Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-11T19:02:44.294Z"
             }
           ]
         }
