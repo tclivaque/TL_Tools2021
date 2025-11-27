@@ -40,13 +40,6 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                     .ToList();
 
 
-                // Verificar si los IDs de debug están en candidatos
-                {
-                    var found = candidates.FirstOrDefault(c => c.Id.IntegerValue == debugId);
-                    if (found != null)
-                    {
-                    }
-                }
 
                 if (!candidates.Any())
                     continue;
@@ -137,16 +130,7 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                 .ToList();
 
 
-            // Verificar si los IDs de debug están en allElements
-            {
-                var found = allElements.FirstOrDefault(e => e.Id.IntegerValue == debugId);
-                if (found != null)
-                {
-                }
-                else
-                {
-                }
-            }
+
 
             foreach (var elem in allElements)
             {
