@@ -69,7 +69,7 @@ public class VentanaLeyenda : Window
     {
         this.Title = "Leyenda de Colores";
         this.Width = 800;
-        this.Height = 650;
+        this.Height = 800;
         this.WindowStartupLocation = WindowStartupLocation.Manual;
         this.Left = SystemParameters.PrimaryScreenWidth - this.Width - 50;
         this.Top = 100;

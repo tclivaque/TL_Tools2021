@@ -167,16 +167,7 @@ public class App : IExternalApplication
 
             // ============ PANEL 3: REVISIÓN DE PARÁMETROS ============
 
-            // BOTÓN 9: ⚙️ Revisión
-            PushButtonData buttonDataConfigurar = new PushButtonData("btnConfigurarParametro",
-                                                                    "⚙️ Revisión",
-                                                                    path,
-                                                                    "ConfigurarParametroCommand");
-            PushButton buttonConfigurar = panelRev.AddItem(buttonDataConfigurar) as PushButton;
-            buttonConfigurar.ToolTip = "Configura el parámetro a usar para colorear elementos";
-            buttonConfigurar.LongDescription = "Abre una ventana para definir qué parámetro se usará para agrupar y colorear elementos en la vista.";
-
-            // BOTÓN 10: Aplicar colores
+            // BOTÓN 9: Aplicar colores
             PushButtonData buttonDataAplicar = new PushButtonData("btnAplicarColores",
                                                                  "Aplicar\ncolores",
                                                                  path,
@@ -185,7 +176,7 @@ public class App : IExternalApplication
             buttonAplicar.ToolTip = "Aplica colores a elementos según parámetro configurado";
             buttonAplicar.LongDescription = "Colorea todos los elementos visibles en la vista actual según el valor del parámetro configurado.";
 
-            // BOTÓN 11: Reset
+            // BOTÓN 10: Reset
             PushButtonData buttonDataReset = new PushButtonData("btnReset",
                                                                "Reset",
                                                                path,

@@ -106,8 +106,8 @@ public class EjecutarOverrideCommand : IExternalCommand
 
             if (elem.IsHidden(vistaActiva)) continue;
 
-            string catNameUpper = catName.ToUpper();
-            bool esCategoriaMetrada = categoriasMetradas.Contains(catNameUpper);
+            string catBuiltIn = ((BuiltInCategory)elem.Category.Id.IntegerValue).ToString().ToUpper();
+            bool esCategoriaMetrada = categoriasMetradas.Contains(catBuiltIn);
 
             if (!esCategoriaMetrada)
             {
