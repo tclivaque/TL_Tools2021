@@ -142,7 +142,7 @@ public class EjecutarOverrideCommand : IExternalCommand
             elementosProcesados++;
 
             // FIX: Obtener el BuiltInCategory para comparar con Google Sheets
-            string catBuiltIn = ((BuiltInCategory)elem.Category.Id.IntegerValue).ToString();
+            string catBuiltIn = ((BuiltInCategory)elem.Category.Id.IntegerValue).ToString().ToUpper();
             bool esCategoriaMetrada = categoriasMetradas.Contains(catBuiltIn);
 
             // Debug detallado para los primeros 5 elementos
