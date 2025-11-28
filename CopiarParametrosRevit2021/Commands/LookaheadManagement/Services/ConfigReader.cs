@@ -13,15 +13,13 @@ namespace CopiarParametrosRevit2021.Commands.LookaheadManagement.Services
         private readonly GoogleSheetsService _sheetsService;
         private readonly string _spreadsheetId;
         private readonly string _scheduleSheetName;
-        private readonly string _configSheetName;
 
         public ConfigReader(GoogleSheetsService sheetsService, string spreadsheetId,
-            string scheduleSheetName, string configSheetName)
+            string scheduleSheetName)
         {
             _sheetsService = sheetsService;
             _spreadsheetId = spreadsheetId;
             _scheduleSheetName = scheduleSheetName;
-            _configSheetName = configSheetName;
         }
 
         private string RemoveAccents(string text)
@@ -44,48 +42,153 @@ namespace CopiarParametrosRevit2021.Commands.LookaheadManagement.Services
 
         public List<ActivityRule> ReadConfigRules()
         {
-            var rules = new List<ActivityRule>();
-            var values = _sheetsService.ReadData(_spreadsheetId, $"'{_configSheetName}'!A2:G");
-
-            foreach (var row in values)
+            // REGLAS HARDCODEADAS - Ya no se lee de CONFIG_ACTIVIDADES
+            var rules = new List<ActivityRule>
             {
-                if (row.Count == 0 || string.IsNullOrWhiteSpace(GetCell(row, 0)))
-                    continue;
-
-                var rule = new ActivityRule
+                // === ARQUITECTURA - PISOS ===
+                new ActivityRule
                 {
-                    ActivityKeywords = GetCell(row, 0).ToLower(),
-                    Disciplines = GetCell(row, 1).Split(',')
-                        .Select(d => d.Trim().ToUpper()).ToList(),
-                    RawCategories = GetCell(row, 2),
-                    FuncionFiltroEspecial = GetCell(row, 3),
-                    ParametroFiltro = GetCell(row, 4),
-                    KeywordsFiltro = GetCell(row, 5).Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                        .Select(k => k.Trim().ToLower()).ToList(),
-                    FuncionOrden = GetCell(row, 6)
-                };
-
-                rule.Categories = rule.RawCategories
-                    .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(c =>
-                    {
-                        try
-                        {
-                            return (BuiltInCategory)Enum.Parse(typeof(BuiltInCategory), c.Trim(), true);
-                        }
-                        catch
-                        {
-                            return BuiltInCategory.INVALID;
-                        }
-                    })
-                    .Where(bic => bic != BuiltInCategory.INVALID)
-                    .ToList();
-
-                if (rule.Categories.Any())
+                    ActivityKeywords = "porcelanato",
+                    Disciplines = new List<string> { "AR" },
+                    Categories = new List<BuiltInCategory> { BuiltInCategory.OST_Floors },
+                    RawCategories = "OST_Floors",
+                    FuncionFiltroEspecial = "FiltroMaterialPorcelanato",
+                    FuncionOrden = "Geo_YX"
+                },
+                new ActivityRule
                 {
-                    rules.Add(rule);
+                    ActivityKeywords = "ceramico",
+                    Disciplines = new List<string> { "AR" },
+                    Categories = new List<BuiltInCategory> { BuiltInCategory.OST_Floors },
+                    RawCategories = "OST_Floors",
+                    FuncionFiltroEspecial = "FiltroMaterialCeramico",
+                    FuncionOrden = "Geo_YX"
+                },
+                new ActivityRule
+                {
+                    ActivityKeywords = "cemento semipulido",
+                    Disciplines = new List<string> { "AR" },
+                    Categories = new List<BuiltInCategory> { BuiltInCategory.OST_Floors },
+                    RawCategories = "OST_Floors",
+                    FuncionFiltroEspecial = "FiltroMaterialCemento",
+                    FuncionOrden = "Geo_YX"
+                },
+                new ActivityRule
+                {
+                    ActivityKeywords = "pisos de cemento semipulido",
+                    Disciplines = new List<string> { "AR" },
+                    Categories = new List<BuiltInCategory> { BuiltInCategory.OST_Floors },
+                    RawCategories = "OST_Floors",
+                    FuncionFiltroEspecial = "FiltroPisoSitioCemento",
+                    FuncionOrden = "Geo_YX"
+                },
+
+                // === ARQUITECTURA - MUROS ===
+                new ActivityRule
+                {
+                    ActivityKeywords = "bloqueta 14",
+                    Disciplines = new List<string> { "AR" },
+                    Categories = new List<BuiltInCategory> { BuiltInCategory.OST_Walls, BuiltInCategory.OST_StructuralFraming },
+                    RawCategories = "OST_Walls,OST_StructuralFraming",
+                    FuncionFiltroEspecial = "FiltroBloqueta14",
+                    FuncionOrden = "Geo_YX"
+                },
+                new ActivityRule
+                {
+                    ActivityKeywords = "bloqueta 19",
+                    Disciplines = new List<string> { "AR" },
+                    Categories = new List<BuiltInCategory> { BuiltInCategory.OST_Walls, BuiltInCategory.OST_StructuralFraming },
+                    RawCategories = "OST_Walls,OST_StructuralFraming",
+                    FuncionFiltroEspecial = "FiltroBloqueta19",
+                    FuncionOrden = "Geo_YX"
+                },
+
+                // === ARQUITECTURA - ESCALERAS ===
+                new ActivityRule
+                {
+                    ActivityKeywords = "escalera",
+                    Disciplines = new List<string> { "AR" },
+                    Categories = new List<BuiltInCategory> { BuiltInCategory.OST_Stairs, BuiltInCategory.OST_Floors },
+                    RawCategories = "OST_Stairs,OST_Floors",
+                    FuncionFiltroEspecial = "FiltroEscaleraAmbiente",
+                    FuncionOrden = "Vertical_Z_Desc"
+                },
+
+                // === ARQUITECTURA - PODOTACTILES ===
+                new ActivityRule
+                {
+                    ActivityKeywords = "podotactil",
+                    Disciplines = new List<string> { "AR" },
+                    Categories = new List<BuiltInCategory> { BuiltInCategory.OST_GenericModel },
+                    RawCategories = "OST_GenericModel",
+                    FuncionFiltroEspecial = "FiltroPodotactil",
+                    FuncionOrden = "Geo_YX"
+                },
+
+                // === ELÉCTRICAS - LUMINARIAS ===
+                new ActivityRule
+                {
+                    ActivityKeywords = "luminaria",
+                    Disciplines = new List<string> { "EE" },
+                    Categories = new List<BuiltInCategory> { BuiltInCategory.OST_ElectricalFixtures, BuiltInCategory.OST_LightingFixtures },
+                    RawCategories = "OST_ElectricalFixtures,OST_LightingFixtures",
+                    FuncionFiltroEspecial = "FiltroLuminarias",
+                    FuncionOrden = "Geo_YX"
+                },
+
+                // === ELÉCTRICAS - TABLEROS ===
+                new ActivityRule
+                {
+                    ActivityKeywords = "tablero",
+                    Disciplines = new List<string> { "EE" },
+                    Categories = new List<BuiltInCategory> { BuiltInCategory.OST_ElectricalEquipment },
+                    RawCategories = "OST_ElectricalEquipment",
+                    FuncionFiltroEspecial = "FiltroTableros",
+                    FuncionOrden = "Geo_YX"
+                },
+
+                // === ELÉCTRICAS/COMUNICACIONES - BUZONES ===
+                new ActivityRule
+                {
+                    ActivityKeywords = "buzon",
+                    Disciplines = new List<string> { "DT", "EE" },
+                    Categories = new List<BuiltInCategory> { BuiltInCategory.OST_ElectricalEquipment },
+                    RawCategories = "OST_ElectricalEquipment",
+                    FuncionFiltroEspecial = "FiltroBuzon",
+                    FuncionOrden = "Geo_YX"
+                },
+
+                // === SANITARIAS - CAJAS ===
+                new ActivityRule
+                {
+                    ActivityKeywords = "caja",
+                    Disciplines = new List<string> { "SA" },
+                    Categories = new List<BuiltInCategory> { BuiltInCategory.OST_PlumbingFixtures },
+                    RawCategories = "OST_PlumbingFixtures",
+                    FuncionFiltroEspecial = "FiltroCajaDesague",
+                    FuncionOrden = "Geo_YX"
+                },
+                new ActivityRule
+                {
+                    ActivityKeywords = "pluvial",
+                    Disciplines = new List<string> { "SA" },
+                    Categories = new List<BuiltInCategory> { BuiltInCategory.OST_PlumbingFixtures },
+                    RawCategories = "OST_PlumbingFixtures",
+                    FuncionFiltroEspecial = "FiltroCajaPluvial",
+                    FuncionOrden = "Geo_YX"
+                },
+
+                // === ESTRUCTURAS - VEREDAS ===
+                new ActivityRule
+                {
+                    ActivityKeywords = "vereda",
+                    Disciplines = new List<string> { "ES" },
+                    Categories = new List<BuiltInCategory> { BuiltInCategory.OST_Parts },
+                    RawCategories = "OST_Parts",
+                    FuncionFiltroEspecial = "FiltroPartVereda",
+                    FuncionOrden = "Geo_YX"
                 }
-            }
+            };
 
             return rules;
         }

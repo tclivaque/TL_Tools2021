@@ -15,7 +15,6 @@ namespace CopiarParametrosRevit2021.Commands.LookaheadManagement
         // Se mantiene la ID original exacta
         private const string SPREADSHEET_ID = "1DPSRZDrqZkCxaHQrIIaz5NSf5m3tLJcggvAx9k8x9SA";
         private const string SCHEDULE_SHEET_NAME = "LOOKAHEAD";
-        private const string CONFIG_SHEET_NAME = "CONFIG_ACTIVIDADES";
 
         // === CONSTANTES ===
         private const double ANCHO_14_METROS = 0.14;
@@ -77,8 +76,7 @@ namespace CopiarParametrosRevit2021.Commands.LookaheadManagement
                 var configReader = new ConfigReader(
                     sheetsService,
                     SPREADSHEET_ID,
-                    SCHEDULE_SHEET_NAME,
-                    CONFIG_SHEET_NAME);
+                    SCHEDULE_SHEET_NAME);
 
                 var configRules = configReader.ReadConfigRules();
 
