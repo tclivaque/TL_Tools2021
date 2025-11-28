@@ -1,14 +1,12 @@
 using Autodesk.Revit.DB;
+using CopiarParametrosRevit2021.Commands.LookaheadManagement.Models;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Text;
-using TL_Tools2021.Commands.LookaheadManagement.Models;
-using CopiarParametrosRevit2021.Helpers; // Asegúrate de que este namespace coincida con tu GoogleSheetsService unificado
 
-namespace TL_Tools2021.Commands.LookaheadManagement.Services
+namespace CopiarParametrosRevit2021.Commands.LookaheadManagement.Services
 {
     public class ConfigReader
     {
@@ -28,73 +26,65 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
 
         private string RemoveAccents(string text)
         {
-            if (string.IsNullOrEmpty(text)) return text;
+            if (string.IsNullOrEmpty(text))
+                return text;
+
             var normalized = text.Normalize(NormalizationForm.FormD);
             var sb = new StringBuilder();
+
             foreach (char c in normalized)
             {
-                if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+                var category = CharUnicodeInfo.GetUnicodeCategory(c);
+                if (category != UnicodeCategory.NonSpacingMark)
                     sb.Append(c);
             }
+
             return sb.ToString().Normalize(NormalizationForm.FormC);
         }
 
         public List<ActivityRule> ReadConfigRules()
         {
             var rules = new List<ActivityRule>();
+            var values = _sheetsService.ReadData(_spreadsheetId, $"'{_configSheetName}'!A2:G");
 
-            try
+            foreach (var row in values)
             {
-                var values = _sheetsService.ReadData(_spreadsheetId, $"'{_configSheetName}'!A2:G");
+                if (row.Count == 0 || string.IsNullOrWhiteSpace(GetCell(row, 0)))
+                    continue;
 
-                int rowIndex = 2;
-                foreach (var row in values)
+                var rule = new ActivityRule
                 {
-                    string keyword = GetCell(row, 0);
+                    ActivityKeywords = GetCell(row, 0).ToLower(),
+                    Disciplines = GetCell(row, 1).Split(',')
+                        .Select(d => d.Trim().ToUpper()).ToList(),
+                    RawCategories = GetCell(row, 2),
+                    FuncionFiltroEspecial = GetCell(row, 3),
+                    ParametroFiltro = GetCell(row, 4),
+                    KeywordsFiltro = GetCell(row, 5).Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(k => k.Trim().ToLower()).ToList(),
+                    FuncionOrden = GetCell(row, 6)
+                };
 
-                    if (string.IsNullOrWhiteSpace(keyword))
-                    {
-                        rowIndex++;
-                        continue;
-                    }
-
-                    var rule = new ActivityRule
-                    {
-                        ActivityKeywords = keyword.ToLower(),
-                        Disciplines = GetCell(row, 1).Split(',').Select(d => d.Trim().ToUpper()).ToList(),
-                        RawCategories = GetCell(row, 2),
-                        FuncionFiltroEspecial = GetCell(row, 3),
-                        ParametroFiltro = GetCell(row, 4),
-                        KeywordsFiltro = GetCell(row, 5).Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                            .Select(k => k.Trim().ToLower()).ToList(),
-                        FuncionOrden = GetCell(row, 6)
-                    };
-
-                    // Parsear Categorías
-                    rule.Categories = new List<BuiltInCategory>();
-                    var rawCats = rule.RawCategories.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-
-                    foreach (var c in rawCats)
+                rule.Categories = rule.RawCategories
+                    .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(c =>
                     {
                         try
                         {
-                            var bic = (BuiltInCategory)Enum.Parse(typeof(BuiltInCategory), c.Trim(), true);
-                            rule.Categories.Add(bic);
+                            return (BuiltInCategory)Enum.Parse(typeof(BuiltInCategory), c.Trim(), true);
                         }
-                        catch { /* Ignorar categorías inválidas */ }
-                    }
+                        catch
+                        {
+                            return BuiltInCategory.INVALID;
+                        }
+                    })
+                    .Where(bic => bic != BuiltInCategory.INVALID)
+                    .ToList();
 
-                    if (rule.Categories.Any())
-                    {
-                        rules.Add(rule);
-                    }
-
-                    rowIndex++;
+                if (rule.Categories.Any())
+                {
+                    rules.Add(rule);
                 }
-            }
-            catch (Exception ex)
-            {
-                throw;
             }
 
             return rules;
@@ -103,9 +93,8 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
         public List<ScheduleData> ReadScheduleData(List<ActivityRule> rules, string activeId)
         {
             var data = new List<ScheduleData>();
-
-            // 1. Leer Encabezados
             var headers = _sheetsService.ReadData(_spreadsheetId, $"'{_scheduleSheetName}'!1:1");
+
             if (headers == null || headers.Count == 0)
             {
                 return data;
@@ -114,11 +103,10 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
             var headerRow = headers[0];
             int activityColumn = -1, startColumn = -1;
 
-            // Buscar columna clave
             for (int i = 0; i < headerRow.Count; i++)
             {
-                string h = headerRow[i]?.ToString()?.Trim() ?? "";
-                if (h.Equals("DESCRIPCIÓN DE LA ACTIVIDAD", StringComparison.OrdinalIgnoreCase))
+                string headerValue = headerRow[i]?.ToString()?.Trim() ?? "";
+                if (headerValue.Equals("DESCRIPCIÓN DE LA ACTIVIDAD", StringComparison.OrdinalIgnoreCase))
                 {
                     activityColumn = i;
                     startColumn = i + 1;
@@ -128,92 +116,76 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
 
             if (activityColumn == -1)
             {
-                throw new Exception("Columna Actividad no encontrada");
+                throw new Exception("Columna 'DESCRIPCIÓN DE LA ACTIVIDAD' no encontrada");
             }
 
-            // 2. Leer Datos (Hasta columna ZZ para asegurar rango)
             var rows = _sheetsService.ReadData(_spreadsheetId, $"'{_scheduleSheetName}'!A2:ZZ");
 
-            int rowIndex = 2;
-            int matchesFound = 0;
-
+            int rowIndex = 0;
             foreach (var row in rows)
             {
-                if (row.Count <= activityColumn) { rowIndex++; continue; }
+                rowIndex++;
+
+                if (row.Count <= activityColumn)
+                    continue;
 
                 string activityName = GetCell(row, activityColumn).ToLower();
-                if (string.IsNullOrWhiteSpace(activityName)) { rowIndex++; continue; }
+                if (string.IsNullOrWhiteSpace(activityName))
+                    continue;
 
-                // --- LOGICA DE MATCHING DE REGLA ---
                 string activityNameNormalized = RemoveAccents(activityName);
-                ActivityRule matchingRule = null;
 
-                foreach (var r in rules)
-                {
-                    string ruleKw = RemoveAccents(r.ActivityKeywords);
-                    if (activityNameNormalized.Contains(ruleKw))
-                    {
-                        // Priorizar la regla más específica (keyword más largo)
-                        if (matchingRule == null || r.ActivityKeywords.Length > matchingRule.ActivityKeywords.Length)
-                        {
-                            matchingRule = r;
-                        }
-                    }
-                }
+                var matchingRule = rules
+                    .Where(r => activityNameNormalized.Contains(RemoveAccents(r.ActivityKeywords)))
+                    .OrderByDescending(r => r.ActivityKeywords.Length)
+                    .FirstOrDefault();
 
                 if (matchingRule == null)
-                {
-                    // Descomentar para ver todo (puede generar mucho texto)
-                    // Log($"Fila {rowIndex}: '{activityName}' -> SIN REGLA"); 
-                    rowIndex++;
                     continue;
-                }
 
-                // --- REGLA ENCONTRADA ---
+                var scheduleData = new ScheduleData
+                {
+                    ActivityName = activityName,
+                    MatchingRule = matchingRule
+                };
+
                 bool isSitio = IsSitio(matchingRule.FuncionFiltroEspecial) ||
-                               activityNameNormalized.Contains("exterior") ||
-                               activityNameNormalized.Contains("podotactil");
+                    activityNameNormalized.Contains("exterior") ||
+                    activityNameNormalized.Contains("podotactil");
 
                 var groups = new Dictionary<string, ScheduleGroup>();
-                bool rowHasActiveId = false;
 
-                // --- BUSCAR EL ID EN LAS SEMANAS ---
-                for (int i = startColumn; i < row.Count && i < (startColumn + 30); i++)
+                for (int i = startColumn; i < row.Count && i < 30; i++)
                 {
-                    string cellValue = GetCell(row, i);
-                    if (string.IsNullOrWhiteSpace(cellValue) || cellValue.Equals("null", StringComparison.OrdinalIgnoreCase))
+                    string value = GetCell(row, i);
+                    if (string.IsNullOrWhiteSpace(value) ||
+                        value.Equals("null", StringComparison.OrdinalIgnoreCase))
                         continue;
 
                     string week = GetWeek(i - startColumn);
-                    if (week == null) continue;
+                    if (week == null)
+                        continue;
 
                     string key = "";
                     bool valid = false;
 
                     if (isSitio)
                     {
-                        // Lógica SITIO (Busca PLAT)
-                        if (cellValue.ToUpper().StartsWith("PLAT"))
+                        if (value.ToUpper().StartsWith("PLAT"))
                         {
-                            key = cellValue.Replace(" ", "").ToUpper();
+                            key = value.Replace(" ", "").ToUpper();
                             valid = true;
                         }
                     }
                     else
                     {
-                        // Lógica ACTIVO (Busca el ID 282354)
-                        if (cellValue.Contains(activeId))
+                        if (value.Contains(activeId))
                         {
-                            var parts = cellValue.Split('-');
+                            var parts = value.Split('-');
                             if (parts.Length >= 3)
                             {
-                                // Asume formato: SECTOR - ID - NIVEL
                                 key = $"{parts[0].Trim().ToUpper()}|{parts[2].Trim().ToUpper()}";
                                 valid = true;
-                                rowHasActiveId = true;
-                            }
-                            else
-                            {
                             }
                         }
                     }
@@ -229,25 +201,19 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                                 Nivel = isSitio ? null : key.Split('|')[1]
                             };
                         }
-                        if (!groups[key].WeekCounts.ContainsKey(week)) groups[key].WeekCounts[week] = 0;
+
+                        if (!groups[key].WeekCounts.ContainsKey(week))
+                            groups[key].WeekCounts[week] = 0;
+
                         groups[key].WeekCounts[week]++;
                     }
                 }
 
-                // Solo si encontramos grupos válidos (match de ID) agregamos
                 if (groups.Any())
                 {
-                    var scheduleData = new ScheduleData
-                    {
-                        ActivityName = activityName,
-                        MatchingRule = matchingRule
-                    };
                     scheduleData.Groups.AddRange(groups.Values);
                     data.Add(scheduleData);
-                    matchesFound++;
                 }
-
-                rowIndex++;
             }
 
             return data;
@@ -255,21 +221,24 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
 
         private string GetCell(IList<object> row, int index)
         {
-            return (index >= 0 && index < row.Count) ? row[index]?.ToString()?.Trim() ?? "" : "";
+            return (index >= 0 && index < row.Count) ?
+                row[index]?.ToString()?.Trim() ?? "" : "";
         }
 
         private bool IsSitio(string function)
         {
             return new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
-                "FiltroPartVereda", "FiltroCajaDesague", "FiltroCajaPluvial",
-                "FiltroBuzon", "FiltroPisoSitioCemento"
+                "FiltroPartVereda",
+                "FiltroCajaDesague",
+                "FiltroCajaPluvial",
+                "FiltroBuzon",
+                "FiltroPisoSitioCemento"
             }.Contains(function);
         }
 
         private string GetWeek(int offset)
         {
-            // Ajustar mapeo de columnas a semanas
             if (offset <= 5) return "SEM 01";
             if (offset <= 11) return "SEM 02";
             if (offset <= 17) return "SEM 03";

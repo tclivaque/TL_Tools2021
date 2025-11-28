@@ -1,165 +1,241 @@
 using Autodesk.Revit.DB;
+using CopiarParametrosRevit2021.Commands.LookaheadManagement.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TL_Tools2021.Commands.LookaheadManagement.Models;
 
-namespace TL_Tools2021.Commands.LookaheadManagement.Services
+namespace CopiarParametrosRevit2021.Commands.LookaheadManagement.Services
 {
     public class FilterService
     {
+        private readonly Document _doc;
         private readonly ParameterService _paramService;
         private readonly double _ancho14;
         private readonly double _ancho19;
         private readonly double _tolerancia;
 
-        private readonly HashSet<string> _kwPorcelanato = new HashSet<string>
-        {
-            "porcelanato", "gres", "vinilico", "vinílico"
-        };
-
-        private readonly HashSet<string> _kwCeramico = new HashSet<string>
-        {
-            "ceramico", "cerámico"
-        };
-
-        private readonly HashSet<string> _kwCemento = new HashSet<string>
-        {
-            "semipulido"
-        };
-
-        private readonly HashSet<string> _kwSitioCemento = new HashSet<string>
-        {
+        // Keywords según Python original
+        private static readonly string[] KeywordsPorcelanato = { "porcelanato", "gres", "vinilico", "vinílico" };
+        private static readonly string[] KeywordsCeramico = { "ceramico", "cerámico" };
+        private static readonly string[] KeywordsCemento = { "semipulido" };
+        private static readonly string[] KeywordsSitioCemento = {
             "piso de concreto semipulido",
             "piso de cemento pulido",
             "piso de cemento semipulido"
         };
+        private static readonly string[] KeywordsDesague = { "desague", "desagüe" };
+        private static readonly string[] KeywordsPluvial = { "pluvial" };
+        private static readonly string[] KeywordsBuzon = { "buzon", "buzón" };
+        private static readonly string[] KeywordsPartVereda = { "piso", "rampa", "uñas", "solado" };
 
-        private readonly HashSet<string> _kwVereda = new HashSet<string>
+        public FilterService(Document doc, ParameterService paramService, double ancho14, double ancho19, double tolerancia)
         {
-            "piso", "rampa", "uñas", "solado"
-        };
-
-        private readonly HashSet<string> _kwDesague = new HashSet<string>
-        {
-            "desague", "desagüe"
-        };
-
-        private readonly HashSet<string> _kwPluvial = new HashSet<string>
-        {
-            "pluvial"
-        };
-
-        private readonly HashSet<string> _kwBuzon = new HashSet<string>
-        {
-            "buzon", "buzón"
-        };
-
-        private readonly HashSet<string> _kwEscalera = new HashSet<string>
-        {
-            "escalera"
-        };
-
-        public FilterService(ParameterService paramService, double ancho14, double ancho19, double tolerancia)
-        {
+            _doc = doc;
             _paramService = paramService;
             _ancho14 = ancho14;
             _ancho19 = ancho19;
             _tolerancia = tolerancia;
         }
 
-        public bool ApplyFilter(Element element, ActivityRule rule)
+        public bool ApplyFilter(Element elem, ActivityRule rule)
         {
-            if (string.IsNullOrWhiteSpace(rule.FuncionFiltroEspecial))
-            {
-                if (string.IsNullOrWhiteSpace(rule.ParametroFiltro) || !rule.KeywordsFiltro.Any())
-                    return true;
-
-                return RunGenericFilter(element, rule.ParametroFiltro, rule.KeywordsFiltro);
-            }
-
-            switch (rule.FuncionFiltroEspecial)
-            {
-                case "FiltroBloqueta14":
-                    return RunBloquetaFilter(element, _ancho14);
-
-                case "FiltroBloqueta19":
-                    return RunBloquetaFilter(element, _ancho19);
-
-                case "FiltroMaterialPorcelanato":
-                    return RunMaterialFilter(element, _kwPorcelanato);
-
-                case "FiltroMaterialCeramico":
-                    return RunMaterialFilter(element, _kwCeramico);
-
-                case "FiltroMaterialCemento":
-                    return RunMaterialFilter(element, _kwCemento);
-
-                case "FiltroPisoSitioCemento":
-                    return RunDescriptionFilter(element, "Assembly Description", _kwSitioCemento);
-
-                case "FiltroDefault":
-                    return true;
-
-                case "FiltroEscaleraAmbiente":
-                    return RunEscaleraFilter(element);
-
-                case "FiltroPartVereda":
-                    return RunDescriptionFilter(element, "DESCRIPTION PARTS", _kwVereda);
-
-                case "FiltroCajaDesague":
-                    return RunDescriptionFilter(element, "Assembly Description", _kwDesague);
-
-                case "FiltroCajaPluvial":
-                    return RunDescriptionFilter(element, "Assembly Description", _kwPluvial);
-
-                case "FiltroBuzon":
-                    return RunDescriptionFilter(element, "Assembly Description", _kwBuzon);
-            }
-
-            return false;
-        }
-
-        private bool RunEscaleraFilter(Element element)
-        {
-            int categoryId = element.Category.Id.IntegerValue;
-
-            if (categoryId == (int)BuiltInCategory.OST_Stairs)
+            if (string.IsNullOrEmpty(rule.FuncionFiltroEspecial))
                 return true;
 
-            if (categoryId == (int)BuiltInCategory.OST_Floors)
-                return RunDescriptionFilter(element, "AMBIENTE", _kwEscalera);
+            return ApplySpecialFilter(elem, rule.FuncionFiltroEspecial);
+        }
+
+        private bool ApplySpecialFilter(Element elem, string functionName)
+        {
+            switch (functionName)
+            {
+                // === FILTROS DE PISOS - MATERIALES ===
+                case "FiltroMaterialPorcelanato":
+                    return FilterFloorByMaterial(elem, KeywordsPorcelanato);
+
+                case "FiltroMaterialCeramico":
+                    return FilterFloorByMaterial(elem, KeywordsCeramico);
+
+                case "FiltroMaterialCemento":
+                    return FilterFloorByMaterial(elem, KeywordsCemento);
+
+                case "FiltroPisoSitioCemento":
+                    return FilterPisoSitioCemento(elem);
+
+                // === FILTROS DE BLOQUETAS ===
+                case "FiltroBloqueta14":
+                    return FilterBloqueta(elem, _ancho14);
+
+                case "FiltroBloqueta19":
+                    return FilterBloqueta(elem, _ancho19);
+
+                // === FILTRO DE ESCALERA ===
+                case "FiltroEscaleraAmbiente":
+                    // Solo categoría, sin keywords
+                    return elem.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Stairs ||
+                           elem.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Floors;
+
+                // === ACTIVIDADES NUEVAS HARDCODED ===
+                case "FiltroLuminarias":
+                    return FilterByAssemblyDescription(elem, "il-");
+
+                case "FiltroPodotactil":
+                    return FilterByAssemblyDescription(elem, "piso de baldosa podotactil");
+
+                case "FiltroTableros":
+                    return FilterByAssemblyDescription(elem, "te-");
+
+                // === FILTROS MEP SITIO ===
+                case "FiltroCajaDesague":
+                    return FilterByAssemblyDescriptionMultiple(elem, KeywordsDesague);
+
+                case "FiltroCajaPluvial":
+                    return FilterByAssemblyDescriptionMultiple(elem, KeywordsPluvial);
+
+                case "FiltroBuzon":
+                    return FilterByAssemblyDescriptionMultiple(elem, KeywordsBuzon);
+
+                // === FILTROS ESTRUCTURAS ===
+                case "FiltroPartVereda":
+                    return FilterPartVereda(elem);
+
+                default:
+                    return true;
+            }
+        }
+
+        // ========== FILTROS DE PISOS POR MATERIALES ==========
+        private bool FilterFloorByMaterial(Element elem, string[] keywords)
+        {
+            if (elem.Category.Id.IntegerValue != (int)BuiltInCategory.OST_Floors)
+                return false;
+
+            var materialNames = _paramService.GetFloorMaterialNames(elem);
+
+            foreach (var matName in materialNames)
+            {
+                foreach (var keyword in keywords)
+                {
+                    if (matName.ToLower().Contains(keyword.ToLower()))
+                        return true;
+                }
+            }
 
             return false;
         }
 
-        private bool RunBloquetaFilter(Element element, double targetWidth)
+        // ========== FILTRO PISO SITIO CEMENTO ==========
+        private bool FilterPisoSitioCemento(Element elem)
         {
-            string description = _paramService.GetParameterValue(element, "Assembly Description").ToLower();
-
-            if (!description.Contains("bloqueta") && !description.Contains("dintel"))
+            if (elem.Category.Id.IntegerValue != (int)BuiltInCategory.OST_Floors)
                 return false;
 
-            double? width = _paramService.GetElementWidth(element);
-            return width != null && Math.Abs(width.Value - targetWidth) <= _tolerancia;
+            // Busca en Assembly Description del TIPO
+            Element tipo = _doc.GetElement(elem.GetTypeId());
+            if (tipo == null)
+                return false;
+
+            Parameter p_assembly = tipo.LookupParameter("Assembly Description");
+            if (p_assembly == null)
+                return false;
+
+            string desc = (p_assembly.AsString() ?? "").ToLower();
+
+            foreach (var keyword in KeywordsSitioCemento)
+            {
+                if (desc.Contains(keyword.ToLower()))
+                    return true;
+            }
+
+            return false;
         }
 
-        private bool RunMaterialFilter(Element element, HashSet<string> keywords)
+        // ========== FILTRO BLOQUETA ==========
+        private bool FilterBloqueta(Element elem, double anchoTarget)
         {
-            return _paramService.GetFloorMaterialNames(element)
-                .Any(name => keywords.Any(kw => name.Contains(kw)));
+            // Solo Walls y StructuralFraming
+            if (elem.Category.Id.IntegerValue != (int)BuiltInCategory.OST_Walls &&
+                elem.Category.Id.IntegerValue != (int)BuiltInCategory.OST_StructuralFraming)
+                return false;
+
+            // Verificar Assembly Description del TIPO
+            Element tipo = _doc.GetElement(elem.GetTypeId());
+            if (tipo == null)
+                return false;
+
+            Parameter p_assembly = tipo.LookupParameter("Assembly Description");
+            if (p_assembly == null)
+                return false;
+
+            string desc = (p_assembly.AsString() ?? "").ToLower();
+
+            // Debe contener "bloqueta" o "dintel"
+            if (!desc.Contains("bloqueta") && !desc.Contains("dintel"))
+                return false;
+
+            // Verificar ancho
+            double? ancho = _paramService.GetElementWidth(elem);
+            if (!ancho.HasValue)
+                return false;
+
+            return Math.Abs(ancho.Value - anchoTarget) <= _tolerancia;
         }
 
-        private bool RunDescriptionFilter(Element element, string paramName, HashSet<string> keywords)
+        // ========== FILTROS POR ASSEMBLY DESCRIPTION ==========
+        private bool FilterByAssemblyDescription(Element elem, string keyword)
         {
-            string value = _paramService.GetParameterValue(element, paramName).ToLower();
-            return keywords.Any(kw => value.Contains(kw));
+            Element tipo = _doc.GetElement(elem.GetTypeId());
+            if (tipo == null)
+                return false;
+
+            Parameter p_assembly = tipo.LookupParameter("Assembly Description");
+            if (p_assembly == null)
+                return false;
+
+            string desc = (p_assembly.AsString() ?? "").ToLower();
+            return desc.Contains(keyword.ToLower());
         }
 
-        private bool RunGenericFilter(Element element, string paramName, List<string> keywords)
+        private bool FilterByAssemblyDescriptionMultiple(Element elem, string[] keywords)
         {
-            string value = _paramService.GetParameterValue(element, paramName).ToLower();
-            return !string.IsNullOrEmpty(value) && keywords.Any(kw => value.Contains(kw));
+            Element tipo = _doc.GetElement(elem.GetTypeId());
+            if (tipo == null)
+                return false;
+
+            Parameter p_assembly = tipo.LookupParameter("Assembly Description");
+            if (p_assembly == null)
+                return false;
+
+            string desc = (p_assembly.AsString() ?? "").ToLower();
+
+            foreach (var keyword in keywords)
+            {
+                if (desc.Contains(keyword.ToLower()))
+                    return true;
+            }
+
+            return false;
+        }
+
+        // ========== FILTRO PART VEREDA (ESTRUCTURAS) ==========
+        private bool FilterPartVereda(Element elem)
+        {
+            if (elem.Category.Id.IntegerValue != (int)BuiltInCategory.OST_Parts)
+                return false;
+
+            Parameter p_desc = elem.LookupParameter("DESCRIPTION PARTS");
+            if (p_desc == null)
+                return false;
+
+            string desc = (p_desc.AsString() ?? "").ToLower();
+
+            foreach (var keyword in KeywordsPartVereda)
+            {
+                if (desc.Contains(keyword.ToLower()))
+                    return true;
+            }
+
+            return false;
         }
     }
 }

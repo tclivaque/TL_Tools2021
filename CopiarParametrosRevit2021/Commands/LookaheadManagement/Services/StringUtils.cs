@@ -1,6 +1,6 @@
 using System.Linq;
 
-namespace TL_Tools2021.Commands.LookaheadManagement.Services
+namespace CopiarParametrosRevit2021.Commands.LookaheadManagement.Services
 {
     public static class StringUtils
     {

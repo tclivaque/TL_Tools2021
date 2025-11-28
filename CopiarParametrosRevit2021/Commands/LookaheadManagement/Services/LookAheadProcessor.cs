@@ -1,13 +1,11 @@
 using Autodesk.Revit.DB;
+using CopiarParametrosRevit2021.Commands.LookaheadManagement.Models;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using TL_Tools2021.Commands.LookaheadManagement.Models;
 
-namespace TL_Tools2021.Commands.LookaheadManagement.Services
+namespace CopiarParametrosRevit2021.Commands.LookaheadManagement.Services
 {
     public class LookAheadProcessor
     {
@@ -29,7 +27,6 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
             var tasks = data.Where(t => t.MatchingRule.Disciplines
                 .Contains(discipline, StringComparer.OrdinalIgnoreCase)).ToList();
 
-
             foreach (var task in tasks)
             {
                 var rule = task.MatchingRule;
@@ -38,8 +35,6 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                     .Where(c => _cache.ContainsKey(c))
                     .SelectMany(c => _cache[c])
                     .ToList();
-
-
 
                 if (!candidates.Any())
                     continue;
@@ -50,31 +45,23 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                     string groupSectorClean = StringUtils.Clean(group.Sector);
                     string groupNivelClean = StringUtils.Clean(group.Nivel);
 
-
                     foreach (var elem in candidates)
                     {
-
+                        // Skip si ya fue asignado
                         if (_assignedIds.Contains(elem.Id))
-                        {
                             continue;
-                        }
 
+                        // Skip si ya está ejecutado
                         string ejecutado = _paramService.GetParameterValue(elem, "EJECUTADO");
                         if (ejecutado == "1")
-                        {
                             continue;
-                        }
 
+                        // Aplicar filtro
                         bool filterResult = _filterService.ApplyFilter(elem, rule);
                         if (!filterResult)
-                        {
-                            {
-                                string assemblyDesc = _paramService.GetParameterValue(elem, "Assembly Description");
-                            }
                             continue;
-                        }
 
-
+                        // Verificar SECTOR y NIVEL
                         string elemSector = _paramService.GetParameterValue(elem, "SECTOR");
                         string elemSectorClean = StringUtils.Clean(elemSector);
                         bool match = false;
@@ -82,16 +69,12 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                         if (group.IsSitioLogic)
                         {
                             match = (elemSectorClean == groupSectorClean);
-                            {
-                            }
                         }
                         else
                         {
                             string elemNivel = _paramService.GetParameterValue(elem, "NIVEL");
                             string elemNivelClean = StringUtils.Clean(elemNivel);
                             match = (elemSectorClean == groupSectorClean && elemNivelClean == groupNivelClean);
-                            {
-                            }
                         }
 
                         if (match)
@@ -100,13 +83,16 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                         }
                     }
 
-
                     if (!filtered.Any())
                         continue;
 
+                    // Ordenar elementos
                     var ordered = OrderElements(filtered, rule.FuncionOrden);
+
+                    // Distribuir elementos
                     var distributed = DistributeElements(ordered, group.WeekCounts);
 
+                    // Asignar LOOK AHEAD
                     foreach (var pair in distributed)
                     {
                         if (_paramService.SetParameterValue(pair.Item1, "LOOK AHEAD", pair.Item2))
@@ -120,7 +106,6 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
 
         public void ApplyExecuteAndSALogic(List<ActivityRule> rules)
         {
-
             var allElements = rules
                 .SelectMany(r => r.Categories)
                 .Distinct()
@@ -129,21 +114,14 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                 .Distinct(new ElementIdComparer())
                 .ToList();
 
-
-
-
             foreach (var elem in allElements)
             {
-
-                // Verificar relevancia con cada regla
+                // Verificar si es relevante (cumple con alguna regla)
                 ActivityRule matchingRule = null;
                 foreach (var r in rules)
                 {
                     bool categoryMatch = r.Categories.Contains((BuiltInCategory)elem.Category.Id.IntegerValue);
                     bool filterMatch = _filterService.ApplyFilter(elem, r);
-
-                    {
-                    }
 
                     if (categoryMatch && filterMatch)
                     {
@@ -152,42 +130,33 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
                     }
                 }
 
-                bool relevant = matchingRule != null;
-
-                if (!relevant)
-                {
+                // Solo procesar elementos relevantes
+                if (matchingRule == null)
                     continue;
-                }
-
 
                 string ejecutado = _paramService.GetParameterValue(elem, "EJECUTADO");
                 bool wasAssigned = _assignedIds.Contains(elem.Id);
 
-                {
-                }
-
                 if (ejecutado == "1")
                 {
+                    // Si está ejecutado, marcar como "EJECUTADO"
                     _paramService.SetParameterValue(elem, "LOOK AHEAD", "EJECUTADO");
                     _paramService.SetParameterValue(elem, "EN CURSO", 0);
                 }
                 else if (!wasAssigned)
                 {
-                    // Siempre asignar "SA" si no fue asignado en esta ejecución
-                    // Esto sobrescribe valores anteriores (SEM XX) que ya no están en la programación actual
+                    // Si no fue asignado en esta ejecución, marcar como "SA"
                     _paramService.SetParameterValue(elem, "LOOK AHEAD", "SA");
                 }
-                else
-                {
-                }
+                // Si fue asignado, no hacer nada (ya tiene su semana)
             }
-
         }
 
         private List<Element> OrderElements(List<Element> elements, string orderFunction)
         {
             if (orderFunction == "Geo_YX")
             {
+                // Ordenar por Y ascendente, luego X descendente
                 return elements
                     .OrderBy(e => _paramService.GetElementCenter(e).Y)
                     .ThenByDescending(e => _paramService.GetElementCenter(e).X)
@@ -196,6 +165,7 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
 
             if (orderFunction == "Vertical_Z_Desc")
             {
+                // Ordenar por Z descendente (de arriba hacia abajo)
                 return elements
                     .OrderByDescending(e => _paramService.GetElementCenter(e).Z)
                     .ToList();
@@ -213,16 +183,19 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
             if (totalElements == 0)
                 return result;
 
+            // Ordenar semanas
             var weeks = weekCounts.Keys
                 .OrderBy(w => int.Parse(Regex.Match(w, @"\d+").Value))
                 .ToList();
 
+            // CASO ESPECIAL: Si solo hay 1 elemento, asignar a la última semana
             if (totalElements == 1)
             {
                 result.Add(new Tuple<Element, string>(elements[0], weeks.Last()));
                 return result;
             }
 
+            // CASO NORMAL: Distribución proporcional
             double total = weekCounts.Values.Sum();
             int assigned = 0;
 

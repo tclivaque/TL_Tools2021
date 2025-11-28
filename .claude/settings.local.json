@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(msbuild:*)",
+      "Bash(Select-String -Pattern \"error|warning CS0105|warning CS0234\" -Context 0,1)",
+      "Bash(cmd /c \"cd /d C:\\Users\\User\\source\\repos\\CopiarParametrosRevit2021 && msbuild CopiarParametrosRevit2021.sln /p:Configuration=Debug /p:Platform=x64 /t:Build /v:minimal /nologo\")",
+      "Bash(cmd /c \"where msbuild\")",
+      "Bash(cmd /c \"\"\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe\"\" -version\")",
+      "Bash(test:*)",
+      "Bash(\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe\" \"C:\\Users\\User\\source\\repos\\CopiarParametrosRevit2021\\CopiarParametrosRevit2021.sln\" /p:Configuration=Debug /p:Platform=x64 /t:Build /v:minimal /nologo)",
+      "Bash(cmd /c \"\"\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe\"\" \"\"C:\\Users\\User\\source\\repos\\CopiarParametrosRevit2021\\CopiarParametrosRevit2021.sln\"\" /p:Configuration=Debug /p:Platform=x64 /t:Build /v:minimal\")",
+      "Bash(\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe\" CopiarParametrosRevit2021.sln /p:Configuration=Debug /p:Platform=x64 /t:Build /v:minimal)",
+      "Bash(\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe\" CopiarParametrosRevit2021.csproj -p:Configuration=Debug -p:Platform=x64 -t:Build -v:minimal)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

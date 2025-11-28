@@ -3,10 +3,10 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System;
 using System.Linq;
-using CopiarParametrosRevit2021.Helpers;
-using TL_Tools2021.Commands.LookaheadManagement.Services;
+using CopiarParametrosRevit2021.Commands.LookaheadManagement.Services;
+using CopiarParametrosRevit2021.Commands.LookaheadManagement.Models;
 
-namespace TL_Tools2021.Commands.LookaheadManagement
+namespace CopiarParametrosRevit2021.Commands.LookaheadManagement
 {
     [Transaction(TransactionMode.Manual)]
     [Regeneration(RegenerationOption.Manual)]
@@ -84,6 +84,7 @@ namespace TL_Tools2021.Commands.LookaheadManagement
 
                 var paramService = new ParameterService(doc);
                 var filterService = new FilterService(
+                    doc,
                     paramService,
                     ANCHO_14_PIES,
                     ANCHO_19_PIES,

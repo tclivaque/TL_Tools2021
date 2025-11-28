@@ -202,7 +202,7 @@ public class App : IExternalApplication
             PushButtonData buttonDataProcesarLookahead = new PushButtonData("btnProcesarLookahead",
                                                                             "Procesar\nLookahead",
                                                                             path,
-                                                                            "TL_Tools2021.Commands.LookaheadManagement.ProcesarLookaheadCommand");
+                                                                            "CopiarParametrosRevit2021.Commands.LookaheadManagement.ProcesarLookaheadCommand");
             PushButton buttonProcesarLookahead = panelLookaheadRibbon.AddItem(buttonDataProcesarLookahead) as PushButton;
             buttonProcesarLookahead.ToolTip = "Procesa Lookahead completo: Asigna semanas y actualiza membrete";
             buttonProcesarLookahead.LongDescription = "Ejecuta el proceso completo de Lookahead:\n1. Lee datos de Google Sheets y asigna semanas a elementos\n2. Actualiza automáticamente el membrete del plano LPS-S";

@@ -5,7 +5,7 @@ using System;
 using System.IO;
 using System.Linq;
 
-namespace TL_Tools2021.Commands.LookaheadManagement
+namespace CopiarParametrosRevit2021.Commands.LookaheadManagement
 {
     [Transaction(TransactionMode.Manual)]
     public class MembreteLookaheadCommand : IExternalCommand

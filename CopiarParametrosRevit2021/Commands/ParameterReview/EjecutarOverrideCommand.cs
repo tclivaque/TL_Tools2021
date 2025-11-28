@@ -71,7 +71,8 @@ public class EjecutarOverrideCommand : IExternalCommand
         List<string> categoriasMetradas = new List<string>();
         try
         {
-            var sheetsService = new GoogleSheetsService();
+            // Usar explícitamente el helper general del proyecto, no el del Lookahead
+            var sheetsService = new CopiarParametrosRevit2021.Helpers.GoogleSheetsService();
             categoriasMetradas = sheetsService.ObtenerCategoriasDesdeSheet(SPREADSHEET_ID, SHEET_NAME)
                                               .Select(c => c.ToUpper())
                                               .ToList();

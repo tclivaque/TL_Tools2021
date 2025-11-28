@@ -1,7 +1,7 @@
 using Autodesk.Revit.DB;
 using System.Collections.Generic;
 
-namespace TL_Tools2021.Commands.LookaheadManagement.Services
+namespace CopiarParametrosRevit2021.Commands.LookaheadManagement.Services
 {
     public class ParameterService
     {
@@ -48,6 +48,19 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
             }
 
             return (value ?? "").Trim();
+        }
+
+        public string GetParameterValue(Element elem, BuiltInParameter bip)
+        {
+            if (elem == null) return "";
+
+            // Intenta obtener el parámetro por su ID interno (más seguro que por nombre)
+            Parameter param = elem.get_Parameter(bip);
+
+            if (param == null) return "";
+
+            // Devuelve el valor como texto (o el valor interno si es numérico)
+            return param.AsString() ?? param.AsValueString() ?? "";
         }
 
         public bool SetParameterValue(Element element, string paramName, object value)

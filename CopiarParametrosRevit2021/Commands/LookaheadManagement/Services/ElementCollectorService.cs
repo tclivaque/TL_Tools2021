@@ -1,9 +1,11 @@
 using Autodesk.Revit.DB;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using TL_Tools2021.Commands.LookaheadManagement.Models;
+// IMPORTANTE: Referencia a los nuevos modelos
+using CopiarParametrosRevit2021.Commands.LookaheadManagement.Models;
 
-namespace TL_Tools2021.Commands.LookaheadManagement.Services
+namespace CopiarParametrosRevit2021.Commands.LookaheadManagement.Services
 {
     public class ElementCollectorService
     {
@@ -17,16 +19,24 @@ namespace TL_Tools2021.Commands.LookaheadManagement.Services
         public Dictionary<BuiltInCategory, List<Element>> CollectElements(List<ActivityRule> rules)
         {
             var cache = new Dictionary<BuiltInCategory, List<Element>>();
-            var categories = rules.SelectMany(r => r.Categories).Distinct();
+            var uniqueCategories = rules
+                .SelectMany(r => r.Categories)
+                .Distinct()
+                .ToList();
 
-            foreach (var category in categories)
+            foreach (var cat in uniqueCategories)
             {
-                if (!cache.ContainsKey(category))
+                if (cat == BuiltInCategory.INVALID) continue;
+
+                var elements = new FilteredElementCollector(_doc)
+                    .OfCategory(cat)
+                    .WhereElementIsNotElementType()
+                    .ToElements()
+                    .ToList();
+
+                if (elements.Any())
                 {
-                    cache[category] = new FilteredElementCollector(_doc)
-                        .OfCategory(category)
-                        .WhereElementIsNotElementType()
-                        .ToList();
+                    cache[cat] = elements;
                 }
             }
 

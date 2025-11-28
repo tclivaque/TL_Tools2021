@@ -93,6 +93,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.cs" />
+    <Compile Include="Commands\LookaheadManagement\Services\GoogleSheetsService.cs" />
     <!-- Commands: Progress Management -->
     <Compile Include="Commands\ProgressManagement\ValorizacionCommand.cs" />
     <Compile Include="Commands\ProgressManagement\EnCursoCommand.cs" />

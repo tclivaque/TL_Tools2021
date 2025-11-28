@@ -1,22 +1,20 @@
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
-using Google.Apis.Sheets.v4.Data;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 
-// AGREGADO: Namespace para organizar el código
-namespace CopiarParametrosRevit2021.Helpers
+namespace CopiarParametrosRevit2021.Commands.LookaheadManagement.Services
 {
     public class GoogleSheetsService
     {
-        private SheetsService _service;
+        private static readonly string CREDENTIALS_PATH = Path.Combine(
+            Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+            "revitsheetsintegration-89c34b39c2ae.json");
 
-        // Ajusta el nombre del archivo JSON si es diferente
-        private static readonly string CREDENTIALS_FILE = "revitsheetsintegration-89c34b39c2ae.json";
+        public SheetsService Service { get; private set; }
 
         public GoogleSheetsService()
         {
@@ -27,81 +25,37 @@ namespace CopiarParametrosRevit2021.Helpers
         {
             try
             {
-                // Busca el JSON en la misma carpeta donde está la DLL compilada
-                string assemblyPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                string credentialPath = Path.Combine(assemblyPath, CREDENTIALS_FILE);
-
-                if (!File.Exists(credentialPath))
-                {
-                    throw new FileNotFoundException($"No se encontró el archivo de credenciales en: {credentialPath}");
-                }
-
                 GoogleCredential credential;
-                using (var stream = new FileStream(credentialPath, FileMode.Open, FileAccess.Read))
+                using (var stream = new FileStream(CREDENTIALS_PATH, FileMode.Open, FileAccess.Read))
                 {
+#pragma warning disable CS0618
                     credential = GoogleCredential.FromStream(stream)
-                        .CreateScoped(new[] { SheetsService.Scope.Spreadsheets });
+                        .CreateScoped(new[] { SheetsService.Scope.SpreadsheetsReadonly });
+#pragma warning restore CS0618
                 }
 
-                _service = new SheetsService(new BaseClientService.Initializer()
+                Service = new SheetsService(new BaseClientService.Initializer()
                 {
                     HttpClientInitializer = credential,
-                    ApplicationName = "RevitPluginColors"
+                    ApplicationName = "RevitLookAheadAddin"
                 });
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error de autenticación con Google: {ex.Message}");
+                throw new Exception($"Error al inicializar credenciales: {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// Busca la variable "CATEGORIAS" en la columna A y devuelve la lista de categorías de la columna B.
-        /// </summary>
-        public List<string> ObtenerCategoriasDesdeSheet(string spreadsheetId, string sheetName)
+        public IList<IList<object>> ReadData(string spreadsheetId, string range)
         {
             try
             {
-                // Leemos columnas A y B de la hoja
-                string range = $"'{sheetName}'!A:B";
-                SpreadsheetsResource.ValuesResource.GetRequest request =
-                    _service.Spreadsheets.Values.Get(spreadsheetId, range);
-
-                ValueRange response = request.Execute();
-                IList<IList<object>> values = response.Values;
-
-                if (values != null && values.Count > 0)
-                {
-                    foreach (var row in values)
-                    {
-                        // Necesitamos al menos 2 columnas (A y B)
-                        if (row.Count < 2) continue;
-
-                        string key = row[0]?.ToString()?.Trim().ToUpper();
-
-                        if (key == "CATEGORIAS")
-                        {
-                            string contenidoCeldaB = row[1]?.ToString();
-
-                            if (string.IsNullOrWhiteSpace(contenidoCeldaB))
-                                return new List<string>();
-
-                            // Separar por saltos de línea y limpiar espacios
-                            return contenidoCeldaB
-                                .Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
-                                .Select(c => c.Trim())
-                                .Where(c => !string.IsNullOrWhiteSpace(c))
-                                .ToList();
-                        }
-                    }
-                }
-
-                // Si no se encuentra la clave "CATEGORIAS"
-                return new List<string>();
+                var response = Service.Spreadsheets.Values.Get(spreadsheetId, range).Execute();
+                return response.Values ?? new List<IList<object>>();
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error leyendo Google Sheets: {ex.Message}");
+                throw new Exception($"Error leyendo datos de Google Sheets: {ex.Message}");
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿using Google.Apis.Auth.OAuth2;
+using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Google.Apis.Sheets.v4.Data;
@@ -14,7 +14,6 @@ namespace CopiarParametrosRevit2021.Helpers
     {
         private SheetsService _service;
 
-        // Ajusta el nombre si tu archivo JSON es distinto
         private static readonly string CREDENTIALS_FILE = "revitsheetsintegration-89c34b39c2ae.json";
 
         public GoogleSheetsService()
@@ -37,7 +36,6 @@ namespace CopiarParametrosRevit2021.Helpers
                 GoogleCredential credential;
                 using (var stream = new FileStream(credentialPath, FileMode.Open, FileAccess.Read))
                 {
-                    // Usamos Scope completo para permitir lectura y escritura en todo el plugin
                     credential = GoogleCredential.FromStream(stream)
                         .CreateScoped(new[] { SheetsService.Scope.Spreadsheets });
                 }
@@ -45,7 +43,7 @@ namespace CopiarParametrosRevit2021.Helpers
                 _service = new SheetsService(new BaseClientService.Initializer()
                 {
                     HttpClientInitializer = credential,
-                    ApplicationName = "RevitPluginUnified"
+                    ApplicationName = "RevitPluginColors"
                 });
             }
             catch (Exception ex)
@@ -54,33 +52,16 @@ namespace CopiarParametrosRevit2021.Helpers
             }
         }
 
-        /// <summary>
-        /// Método genérico para leer cualquier rango (Usado por Lookahead y otros)
-        /// </summary>
-        public IList<IList<object>> ReadData(string spreadsheetId, string range)
-        {
-            try
-            {
-                var request = _service.Spreadsheets.Values.Get(spreadsheetId, range);
-                var response = request.Execute();
-                return response.Values ?? new List<IList<object>>();
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Error leyendo datos de Google Sheets: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Método específico para leer la lista blanca de categorías (Usado por Auditoría/Colores)
-        /// </summary>
         public List<string> ObtenerCategoriasDesdeSheet(string spreadsheetId, string sheetName)
         {
             try
             {
-                // Reutilizamos ReadData para no repetir lógica
                 string range = $"'{sheetName}'!A:B";
-                var values = ReadData(spreadsheetId, range);
+                SpreadsheetsResource.ValuesResource.GetRequest request =
+                    _service.Spreadsheets.Values.Get(spreadsheetId, range);
+
+                ValueRange response = request.Execute();
+                IList<IList<object>> values = response.Values;
 
                 if (values != null && values.Count > 0)
                 {
@@ -89,10 +70,13 @@ namespace CopiarParametrosRevit2021.Helpers
                         if (row.Count < 2) continue;
 
                         string key = row[0]?.ToString()?.Trim().ToUpper();
+
                         if (key == "CATEGORIAS")
                         {
                             string contenidoCeldaB = row[1]?.ToString();
-                            if (string.IsNullOrWhiteSpace(contenidoCeldaB)) return new List<string>();
+
+                            if (string.IsNullOrWhiteSpace(contenidoCeldaB))
+                                return new List<string>();
 
                             return contenidoCeldaB
                                 .Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
@@ -102,11 +86,12 @@ namespace CopiarParametrosRevit2021.Helpers
                         }
                     }
                 }
+
                 return new List<string>();
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error obteniendo categorías: {ex.Message}");
+                throw new Exception($"Error leyendo Google Sheets: {ex.Message}");
             }
         }
     }
